@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Local history
+.history/
+
+# Build outputs
+dist/
+target/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+src-tauri/icons/*.png
+src-tauri/icons/*.ico
+src-tauri/icons/*.icns
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+
+# Temp
+tmp/
+temp/

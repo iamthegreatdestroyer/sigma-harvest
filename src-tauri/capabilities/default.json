@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default capability set for ΣHARVEST",
+  "windows": ["main"],
+  "permissions": ["core:default", "shell:allow-open"]
+}

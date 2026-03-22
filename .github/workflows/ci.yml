@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-check:
+    name: Rust Check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Cargo check
+        working-directory: src-tauri
+        run: cargo check --all-features
+      - name: Cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-features -- -D warnings
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test --all-features
+
+  frontend-check:
+    name: Frontend Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build

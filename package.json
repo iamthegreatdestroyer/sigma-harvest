@@ -1,0 +1,55 @@
+{
+  "name": "sigma-harvest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ΣHARVEST — Sub-Linear Autonomous Resource Vacuum for Web3 Tokens",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "lint": "eslint src/",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\""
+  },
+  "keywords": [
+    "web3",
+    "airdrop",
+    "tauri",
+    "crypto",
+    "automation"
+  ],
+  "author": "iamthegreatdestroyer",
+  "license": "AGPL-3.0-or-later",
+  "packageManager": "pnpm@10.24.0",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.27",
+    "eslint": "^10.1.0",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.2.2",
+    "vite": "^6.4.1"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-query": "^5.94.5",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "cmdk": "^1.1.1",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.8.0",
+    "viem": "^2.47.6",
+    "zustand": "^5.0.12"
+  },
+  "volta": {
+    "node": "20.20.1"
+  }
+}

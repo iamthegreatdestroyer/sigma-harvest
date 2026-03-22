@@ -11,6 +11,9 @@
   "chat.tools.terminal.enableAutoApprove": true,
   "chat.restoreLastPanelSession": false,
   "claudeCodeChat.permissions.yoloMode": true,
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.linkedProjects": ["src-tauri/Cargo.toml"],
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -27,6 +30,10 @@
   "editor.inlineSuggest.enabled": true,
   "editor.quickSuggestions": { "other": true, "comments": true, "strings": true },
   "editor.largeFileOptimizations": true,
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
   "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
   "[javascriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
   "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
@@ -68,7 +75,8 @@
   "files.associations": {
     "*.agent.md": "markdown",
     "SKILL.md": "markdown",
-    "copilot-instructions.md": "markdown"
+    "copilot-instructions.md": "markdown",
+    "*.css": "tailwindcss"
   },
   "errorLens.enabled": true,
   "errorLens.enabledDiagnosticLevels": ["error", "warning"],
