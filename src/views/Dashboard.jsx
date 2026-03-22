@@ -1,8 +1,18 @@
-import { LayoutDashboard, TrendingUp, Zap, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { LayoutDashboard, TrendingUp, Zap, Activity, Lock, Unlock, Wallet } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import GasTicker from "../components/GasTicker";
 import HarvestFeed from "../components/HarvestFeed";
+import { useWalletStore } from "../stores/walletStore";
 
 export default function Dashboard() {
+  const { vaultLocked, wallets, fetchVaultStatus } = useWalletStore();
+  const [appStatus, setAppStatus] = useState(null);
+
+  useEffect(() => {
+    fetchVaultStatus();
+    invoke("get_app_status").then(setAppStatus).catch(console.error);
+  }, [fetchVaultStatus]);
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
@@ -20,27 +30,27 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4">
         {[
           {
-            label: "Total Collected",
-            value: "$0.00",
-            icon: TrendingUp,
-            color: "text-primary",
+            label: "Vault Status",
+            value: vaultLocked ? "Locked" : "Unlocked",
+            icon: vaultLocked ? Lock : Unlock,
+            color: vaultLocked ? "text-danger" : "text-primary",
           },
           {
-            label: "Active Opportunities",
-            value: "0",
-            icon: Zap,
+            label: "Active Wallets",
+            value: vaultLocked ? "—" : String(wallets.length),
+            icon: Wallet,
             color: "text-accent",
           },
           {
             label: "Pending Claims",
-            value: "0",
+            value: String(appStatus?.pending_claims ?? 0),
             icon: Activity,
             color: "text-warning",
           },
           {
-            label: "Success Rate",
-            value: "—",
-            icon: TrendingUp,
+            label: "Active Opportunities",
+            value: String(appStatus?.active_opportunities ?? 0),
+            icon: Zap,
             color: "text-primary",
           },
         ].map((stat) => (

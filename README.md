@@ -6,13 +6,13 @@ A Tauri 2.0 desktop application that autonomously discovers, evaluates, and clai
 
 ## Architecture
 
-| Layer | Tech |
-|-------|------|
-| **Shell** | Tauri 2.0 (~3MB binary) |
+| Layer        | Tech                                     |
+| ------------ | ---------------------------------------- |
+| **Shell**    | Tauri 2.0 (~3MB binary)                  |
 | **Frontend** | React 19 + Tailwind 4 + Viem 2 + Zustand |
-| **Backend** | Rust (Tokio, alloy, rusqlite, ring) |
-| **Storage** | SQLite + AES-256-GCM + Argon2id |
-| **Design** | Cyberpunk terminal aesthetic |
+| **Backend**  | Rust (Tokio, alloy, rusqlite, ring)      |
+| **Storage**  | SQLite + AES-256-GCM + Argon2id          |
+| **Design**   | Cyberpunk terminal aesthetic             |
 
 ## Supported Chains (Phase 1)
 

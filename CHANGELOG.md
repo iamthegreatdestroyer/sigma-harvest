@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-03-21
 
 ### Added
+
 - Initial Tauri 2.0 project scaffold with React frontend
 - Cyberpunk terminal UI shell with 5 views (Dashboard, Hunt Console, Wallet Manager, Opportunity Inspector, Analytics Bay)
 - Command palette (Ctrl+K) with cmdk integration

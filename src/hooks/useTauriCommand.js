@@ -25,7 +25,7 @@ export function useTauriCommand(command) {
         setLoading(false);
       }
     },
-    [command]
+    [command],
   );
 
   return [data, loading, error, execute];

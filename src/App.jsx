@@ -17,6 +17,7 @@ import OpportunityInspector from "./views/OpportunityInspector";
 import AnalyticsBay from "./views/AnalyticsBay";
 import CommandPalette from "./components/CommandPalette";
 import { useAppStore } from "./stores/appStore";
+import { useWalletStore } from "./stores/walletStore";
 
 const NAV_ITEMS = [
   {
@@ -56,6 +57,11 @@ export default function App() {
     commandPaletteOpen,
     setCommandPaletteOpen,
   } = useAppStore();
+  const { vaultLocked, fetchVaultStatus } = useWalletStore();
+
+  useEffect(() => {
+    fetchVaultStatus();
+  }, [fetchVaultStatus]);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   useEffect(() => {
@@ -151,8 +157,11 @@ export default function App() {
           {/* Sidebar footer */}
           <div className="p-3 border-t border-border">
             <div className="flex items-center gap-2 text-text-muted text-[10px]">
-              <Activity size={12} className="text-primary animate-pulse" />
-              {sidebarExpanded && <span>System Active</span>}
+              {vaultLocked ? (
+                <><Lock size={12} className="text-danger" />{sidebarExpanded && <span className="text-danger">Vault Locked</span>}</>
+              ) : (
+                <><Unlock size={12} className="text-primary" />{sidebarExpanded && <span className="text-primary">Vault Open</span>}</>
+              )}
             </div>
           </div>
         </nav>
