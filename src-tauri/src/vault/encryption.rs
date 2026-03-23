@@ -217,4 +217,128 @@ mod tests {
         let result = decrypt_with_passphrase("pass", &[0u8; 10]);
         assert!(result.is_err());
     }
+
+    // ── Extended encryption tests ─────────────────────────────────
+
+    #[test]
+    fn salt_is_16_bytes() {
+        let salt = generate_salt();
+        assert_eq!(salt.len(), 16);
+    }
+
+    #[test]
+    fn two_salts_are_different() {
+        let s1 = generate_salt();
+        let s2 = generate_salt();
+        assert_ne!(s1, s2);
+    }
+
+    #[test]
+    fn key_is_32_bytes() {
+        let salt = generate_salt();
+        let key = derive_key("test", &salt).unwrap();
+        assert_eq!(key.len(), 32);
+    }
+
+    #[test]
+    fn short_salt_rejected() {
+        let result = derive_key("test", &[0u8; 8]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_passphrase_still_works() {
+        let salt = generate_salt();
+        let key = derive_key("", &salt).unwrap();
+        assert_eq!(key.len(), 32);
+    }
+
+    #[test]
+    fn encrypt_empty_plaintext() {
+        let salt = generate_salt();
+        let key = derive_key("pass", &salt).unwrap();
+        let encrypted = encrypt(&key, b"").unwrap();
+        let decrypted = decrypt(&key, &encrypted).unwrap();
+        assert_eq!(decrypted, b"");
+    }
+
+    #[test]
+    fn encrypt_large_data() {
+        let salt = generate_salt();
+        let key = derive_key("pass", &salt).unwrap();
+        let data = vec![0xABu8; 1_000_000]; // 1 MB
+        let encrypted = encrypt(&key, &data).unwrap();
+        let decrypted = decrypt(&key, &encrypted).unwrap();
+        assert_eq!(decrypted, data);
+    }
+
+    #[test]
+    fn ciphertext_differs_each_time() {
+        // AES-GCM with random nonce should produce different ciphertext for same plaintext
+        let salt = generate_salt();
+        let key = derive_key("pass", &salt).unwrap();
+        let ct1 = encrypt(&key, b"same data").unwrap();
+        let ct2 = encrypt(&key, b"same data").unwrap();
+        assert_ne!(ct1, ct2); // Random nonce ensures different ciphertext
+    }
+
+    #[test]
+    fn ciphertext_is_larger_than_plaintext() {
+        let salt = generate_salt();
+        let key = derive_key("pass", &salt).unwrap();
+        let plaintext = b"hello";
+        let encrypted = encrypt(&key, plaintext).unwrap();
+        // Should include nonce (12) + ciphertext + tag (16)
+        assert!(encrypted.len() > plaintext.len());
+        assert_eq!(encrypted.len(), 12 + plaintext.len() + 16);
+    }
+
+    #[test]
+    fn passphrase_output_includes_salt() {
+        let encrypted = encrypt_with_passphrase("test", b"data").unwrap();
+        // salt (16) + nonce (12) + plaintext (4) + tag (16) = 48
+        assert_eq!(encrypted.len(), 16 + 12 + 4 + 16);
+    }
+
+    #[test]
+    fn truncated_ciphertext_fails() {
+        let encrypted = encrypt_with_passphrase("pass", b"hello world").unwrap();
+        // Truncate to remove tag
+        let truncated = &encrypted[..encrypted.len() - 4];
+        let result = decrypt_with_passphrase("pass", truncated);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn bit_flip_in_nonce_fails() {
+        let mut encrypted = encrypt_with_passphrase("pass", b"data").unwrap();
+        // Flip a bit in the nonce area (bytes 16..28)
+        encrypted[16] ^= 0x01;
+        let result = decrypt_with_passphrase("pass", &encrypted);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn bit_flip_in_salt_fails() {
+        let mut encrypted = encrypt_with_passphrase("pass", b"data").unwrap();
+        // Flip a bit in the salt area (bytes 0..16)
+        encrypted[0] ^= 0x01;
+        let result = decrypt_with_passphrase("pass", &encrypted);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn very_long_passphrase_works() {
+        let long_pass: String = "A".repeat(1000);
+        let encrypted = encrypt_with_passphrase(&long_pass, b"data").unwrap();
+        let decrypted = decrypt_with_passphrase(&long_pass, &encrypted).unwrap();
+        assert_eq!(decrypted, b"data");
+    }
+
+    #[test]
+    fn unicode_passphrase_works() {
+        let encrypted = encrypt_with_passphrase("密码🔒", b"secret").unwrap();
+        let decrypted = decrypt_with_passphrase("密码🔒", &encrypted).unwrap();
+        assert_eq!(decrypted, b"secret");
+    }
 }

@@ -291,4 +291,167 @@ mod tests {
         let sig = sign_hash(&seed, "m/44'/60'/0'/0/0", &hash).unwrap();
         assert_eq!(sig.len(), 64); // r (32) + s (32)
     }
+
+    // ── Extended derivation tests ─────────────────────────────────
+
+    #[test]
+    fn all_chains_derive_same_address_format() {
+        let seed = test_seed();
+        let chains = [
+            Chain::Ethereum,
+            Chain::Arbitrum,
+            Chain::Optimism,
+            Chain::Base,
+            Chain::Polygon,
+            Chain::ZkSync,
+        ];
+        for chain in &chains {
+            let wallet = derive_wallet(&seed, chain, 0).unwrap();
+            assert!(wallet.address.starts_with("0x"), "Chain {} address missing 0x prefix", chain);
+            assert_eq!(wallet.address.len(), 42, "Chain {} address wrong length", chain);
+        }
+    }
+
+    #[test]
+    fn all_evm_chains_use_same_address() {
+        // All EVM chains use coin type 60, so same index → same address
+        let seed = test_seed();
+        let eth_addr = derive_wallet(&seed, &Chain::Ethereum, 0).unwrap().address;
+        let arb_addr = derive_wallet(&seed, &Chain::Arbitrum, 0).unwrap().address;
+        let op_addr = derive_wallet(&seed, &Chain::Optimism, 0).unwrap().address;
+        let base_addr = derive_wallet(&seed, &Chain::Base, 0).unwrap().address;
+        let poly_addr = derive_wallet(&seed, &Chain::Polygon, 0).unwrap().address;
+        let zk_addr = derive_wallet(&seed, &Chain::ZkSync, 0).unwrap().address;
+        assert_eq!(eth_addr, arb_addr);
+        assert_eq!(eth_addr, op_addr);
+        assert_eq!(eth_addr, base_addr);
+        assert_eq!(eth_addr, poly_addr);
+        assert_eq!(eth_addr, zk_addr);
+    }
+
+    #[test]
+    fn derivation_path_includes_correct_index() {
+        let seed = test_seed();
+        for i in 0..10 {
+            let w = derive_wallet(&seed, &Chain::Ethereum, i).unwrap();
+            assert_eq!(w.path, format!("m/44'/60'/0'/0/{}", i));
+            assert_eq!(w.index, i);
+        }
+    }
+
+    #[test]
+    fn chain_name_matches_enum() {
+        assert_eq!(Chain::Ethereum.name(), "ethereum");
+        assert_eq!(Chain::Arbitrum.name(), "arbitrum");
+        assert_eq!(Chain::Optimism.name(), "optimism");
+        assert_eq!(Chain::Base.name(), "base");
+        assert_eq!(Chain::Polygon.name(), "polygon");
+        assert_eq!(Chain::ZkSync.name(), "zksync");
+    }
+
+    #[test]
+    fn chain_display_matches_name() {
+        assert_eq!(format!("{}", Chain::Ethereum), "ethereum");
+        assert_eq!(format!("{}", Chain::Base), "base");
+    }
+
+    #[test]
+    fn derive_100_wallets_all_unique() {
+        let seed = test_seed();
+        let wallets = derive_wallets(&seed, &Chain::Ethereum, 100).unwrap();
+        let addrs: std::collections::HashSet<_> = wallets.iter().map(|w| &w.address).collect();
+        assert_eq!(addrs.len(), 100);
+    }
+
+    #[test]
+    fn derive_zero_wallets_returns_empty() {
+        let seed = test_seed();
+        let wallets = derive_wallets(&seed, &Chain::Ethereum, 0).unwrap();
+        assert!(wallets.is_empty());
+    }
+
+    #[test]
+    fn empty_seed_rejected() {
+        let result = derive_wallet(&[], &Chain::Ethereum, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn short_seed_rejected() {
+        let result = derive_wallet(&[0u8; 32], &Chain::Ethereum, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn long_seed_rejected() {
+        let result = derive_wallet(&[0u8; 128], &Chain::Ethereum, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn sign_different_hashes_different_signatures() {
+        let seed = test_seed();
+        let path = "m/44'/60'/0'/0/0";
+        let sig1 = sign_hash(&seed, path, &[0x11u8; 32]).unwrap();
+        let sig2 = sign_hash(&seed, path, &[0x22u8; 32]).unwrap();
+        assert_ne!(sig1, sig2);
+    }
+
+    #[test]
+    fn sign_deterministic() {
+        let seed = test_seed();
+        let path = "m/44'/60'/0'/0/0";
+        let hash = [0xCDu8; 32];
+        let sig1 = sign_hash(&seed, path, &hash).unwrap();
+        let sig2 = sign_hash(&seed, path, &hash).unwrap();
+        assert_eq!(sig1, sig2);
+    }
+
+    #[test]
+    fn sign_with_invalid_seed_fails() {
+        let result = sign_hash(&[0u8; 32], "m/44'/60'/0'/0/0", &[0u8; 32]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn wallet_label_defaults_to_none() {
+        let seed = test_seed();
+        let wallet = derive_wallet(&seed, &Chain::Ethereum, 0).unwrap();
+        assert!(wallet.label.is_none());
+    }
+
+    #[test]
+    fn wallet_chain_preserved() {
+        let seed = test_seed();
+        let wallet = derive_wallet(&seed, &Chain::Arbitrum, 0).unwrap();
+        assert_eq!(wallet.chain, Chain::Arbitrum);
+    }
+
+    #[test]
+    fn address_hex_characters_only() {
+        let seed = test_seed();
+        let wallet = derive_wallet(&seed, &Chain::Ethereum, 0).unwrap();
+        let hex_part = &wallet.address[2..]; // skip "0x"
+        assert!(hex_part.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn eip55_checksum_is_valid() {
+        // Verify EIP-55: re-checksum the address and compare
+        let seed = test_seed();
+        let wallet = derive_wallet(&seed, &Chain::Ethereum, 0).unwrap();
+        let addr_bytes = hex::decode(&wallet.address[2..].to_lowercase()).unwrap();
+        let rechecked = eip55_checksum(&addr_bytes);
+        assert_eq!(wallet.address, rechecked);
+    }
+
+    #[test]
+    fn derive_wallets_serializable() {
+        let seed = test_seed();
+        let wallet = derive_wallet(&seed, &Chain::Ethereum, 0).unwrap();
+        let json = serde_json::to_string(&wallet).unwrap();
+        let deserialized: DerivedWallet = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.address, wallet.address);
+        assert_eq!(deserialized.index, wallet.index);
+    }
 }

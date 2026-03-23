@@ -10,8 +10,10 @@ import {
   ShieldCheck,
   AlertTriangle,
   Check,
+  ChevronDown,
 } from "lucide-react";
 import { useWalletStore } from "../stores/walletStore";
+import { useChainStore } from "../stores/chainStore";
 
 function MnemonicBackup({ mnemonic, onConfirm }) {
   const [confirmed, setConfirmed] = useState(false);
@@ -192,9 +194,29 @@ export default function WalletManager() {
     fetchVaultStatus,
   } = useWalletStore();
 
+  const { balances, balanceLoading, fetchAllBalances } = useChainStore();
+
+  const [deriveChain, setDeriveChain] = useState("ethereum");
+  const [chainDropdownOpen, setChainDropdownOpen] = useState(false);
+
   useEffect(() => {
     fetchVaultStatus();
   }, [fetchVaultStatus]);
+
+  // Fetch balances when wallets change and vault is unlocked
+  useEffect(() => {
+    if (!vaultLocked && wallets.length > 0) {
+      const addresses = wallets.map((w) => w.address);
+      fetchAllBalances(addresses);
+    }
+  }, [vaultLocked, wallets, fetchAllBalances]);
+
+  const handleRefreshBalances = () => {
+    if (wallets.length > 0) {
+      const addresses = wallets.map((w) => w.address);
+      fetchAllBalances(addresses);
+    }
+  };
 
   // Show mnemonic backup screen after vault creation
   if (mnemonic) {
@@ -210,6 +232,15 @@ export default function WalletManager() {
   if (vaultLocked) {
     return <VaultUnlock />;
   }
+
+  const DERIVE_CHAINS = [
+    "ethereum",
+    "arbitrum",
+    "optimism",
+    "base",
+    "polygon",
+    "zksync",
+  ];
 
   // Vault unlocked → show wallet management
   return (
@@ -238,15 +269,54 @@ export default function WalletManager() {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
+        <div className="flex items-center">
+          <button
+            onClick={() => deriveWallet(deriveChain)}
+            disabled={loading}
+            className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-l text-primary text-xs hover:bg-primary/20 transition-colors disabled:opacity-40"
+          >
+            <Plus size={12} /> Derive
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setChainDropdownOpen(!chainDropdownOpen)}
+              className="flex items-center gap-1 px-2 py-1.5 bg-primary/10 border border-primary/30 border-l-0 rounded-r text-primary text-xs hover:bg-primary/20 transition-colors"
+            >
+              <span className="capitalize">{deriveChain}</span>
+              <ChevronDown size={10} />
+            </button>
+            {chainDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded shadow-lg z-10 min-w-[120px]">
+                {DERIVE_CHAINS.map((chain) => (
+                  <button
+                    key={chain}
+                    onClick={() => {
+                      setDeriveChain(chain);
+                      setChainDropdownOpen(false);
+                    }}
+                    className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-primary/10 transition-colors capitalize ${
+                      chain === deriveChain
+                        ? "text-primary"
+                        : "text-text-muted"
+                    }`}
+                  >
+                    {chain}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
         <button
-          onClick={() => deriveWallet("ethereum")}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 rounded text-primary text-xs hover:bg-primary/20 transition-colors disabled:opacity-40"
+          onClick={handleRefreshBalances}
+          disabled={balanceLoading}
+          className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded text-accent text-xs hover:bg-accent/20 transition-colors disabled:opacity-40"
         >
-          <Plus size={12} /> Derive Wallet
-        </button>
-        <button className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded text-accent text-xs hover:bg-accent/20 transition-colors">
-          <RefreshCw size={12} /> Refresh Balances
+          <RefreshCw
+            size={12}
+            className={balanceLoading ? "animate-spin" : ""}
+          />
+          {balanceLoading ? "Loading..." : "Refresh Balances"}
         </button>
         <button className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors">
           <ArrowRightLeft size={12} /> Consolidate
@@ -264,7 +334,11 @@ export default function WalletManager() {
           </div>
         ) : (
           wallets.map((w) => (
-            <WalletCard key={w.address} wallet={w} />
+            <WalletCard
+              key={w.address}
+              wallet={w}
+              balances={balances[w.address] || []}
+            />
           ))
         )}
       </div>
@@ -272,41 +346,75 @@ export default function WalletManager() {
   );
 }
 
-function WalletCard({ wallet }) {
+function WalletCard({ wallet, balances }) {
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const copyAddress = () => {
+  const copyAddress = (e) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(wallet.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const totalBalance = balances.reduce((sum, b) => sum + b.balance_eth, 0);
+
   return (
-    <div className="bg-surface rounded-lg border border-border p-4 flex items-center justify-between hover:border-primary/30 transition-colors">
-      <div>
-        <div className="text-xs text-text-muted mb-1">
-          {wallet.chain} • <span className="font-mono">{wallet.path}</span>
+    <div className="bg-surface rounded-lg border border-border hover:border-primary/30 transition-colors">
+      <div
+        className="p-4 flex items-center justify-between cursor-pointer"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div>
+          <div className="text-xs text-text-muted mb-1">
+            {wallet.chain} •{" "}
+            <span className="font-mono">{wallet.path}</span>
+          </div>
+          <div className="text-sm font-mono text-text flex items-center gap-2">
+            {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+            <button
+              onClick={copyAddress}
+              className="text-text-dim hover:text-primary transition-colors"
+            >
+              {copied ? (
+                <Check size={12} className="text-primary" />
+              ) : (
+                <Copy size={12} />
+              )}
+            </button>
+          </div>
         </div>
-        <div className="text-sm font-mono text-text flex items-center gap-2">
-          {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-          <button
-            onClick={copyAddress}
-            className="text-text-dim hover:text-primary transition-colors"
-          >
-            {copied ? (
-              <Check size={12} className="text-primary" />
-            ) : (
-              <Copy size={12} />
-            )}
-          </button>
+        <div className="text-right">
+          <div className="text-sm font-bold text-primary">
+            {totalBalance > 0 ? totalBalance.toFixed(6) : "—"} ETH
+          </div>
+          <div className="text-xs text-text-muted">
+            {wallet.label || `Wallet #${wallet.index}`}
+          </div>
         </div>
       </div>
-      <div className="text-right">
-        <div className="text-sm font-bold text-primary">— ETH</div>
-        <div className="text-xs text-text-muted">
-          {wallet.label || `Wallet #${wallet.index}`}
+      {expanded && balances.length > 0 && (
+        <div className="border-t border-border px-4 py-3 space-y-1.5">
+          {balances.map((b) => (
+            <div
+              key={b.chain}
+              className="flex items-center justify-between text-xs"
+            >
+              <span className="text-text-muted capitalize">{b.chain}</span>
+              <span
+                className={
+                  b.balance_eth > 0 ? "text-primary" : "text-text-dim"
+                }
+              >
+                {b.balance_eth > 0
+                  ? b.balance_eth.toFixed(6)
+                  : "0.000000"}{" "}
+                {b.chain === "polygon" ? "MATIC" : "ETH"}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }

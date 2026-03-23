@@ -3,6 +3,7 @@ import { LayoutDashboard, TrendingUp, Zap, Activity, Lock, Unlock, Wallet } from
 import { invoke } from "@tauri-apps/api/core";
 import GasTicker from "../components/GasTicker";
 import HarvestFeed from "../components/HarvestFeed";
+import SigmaCoreWidget from "../components/SigmaCoreWidget";
 import { useWalletStore } from "../stores/walletStore";
 
 export default function Dashboard() {
@@ -82,13 +83,19 @@ export default function Dashboard() {
           <HarvestFeed />
         </div>
 
-        {/* Gas Ticker */}
-        <div className="bg-surface rounded-lg border border-border p-4">
-          <h3 className="text-sm font-semibold text-accent mb-3 flex items-center gap-2">
-            <Activity size={14} />
-            Gas Prices
-          </h3>
-          <GasTicker />
+        {/* Right Column: Gas + ΣCORE */}
+        <div className="space-y-4">
+          {/* Gas Ticker */}
+          <div className="bg-surface rounded-lg border border-border p-4">
+            <h3 className="text-sm font-semibold text-accent mb-3 flex items-center gap-2">
+              <Activity size={14} />
+              Gas Prices
+            </h3>
+            <GasTicker />
+          </div>
+
+          {/* ΣCORE Nervous System */}
+          <SigmaCoreWidget />
         </div>
       </div>
     </div>

@@ -1,4 +1,6 @@
 pub mod analytics;
+pub mod chain;
+pub mod core;
 pub mod db;
 pub mod discovery;
 pub mod evaluation;
@@ -7,8 +9,22 @@ pub mod ipc;
 pub mod scraper;
 pub mod vault;
 
+use std::sync::Mutex;
 use tauri::Manager;
 use tracing_subscriber::EnvFilter;
+
+/// Shared state wrapper for the chain RPC client.
+pub struct ChainClientState(pub chain::ChainClient);
+
+/// Shared state for the ΣCORE nervous system.
+pub struct SigmaCoreState {
+    pub memory: Mutex<core::sigma::memory::AssociativeMemory>,
+    pub swarm: Mutex<core::sigma::swarm::Swarm>,
+    pub dynamics: core::sigma::dynamics::DynamicsEngine,
+    pub compression: Mutex<core::sigma::compression::CompressionPipeline>,
+    pub codebook: Mutex<core::sigma::vectors::Codebook>,
+    pub dynamics_enabled: Mutex<bool>,
+}
 
 /// Initialize the ΣHARVEST Tauri application.
 pub fn run() {
@@ -41,6 +57,20 @@ pub fn run() {
             // Register vault state
             app.manage(vault::keystore::VaultState::new());
 
+            // Register chain client state (4 concurrent RPC calls max for free tiers)
+            app.manage(ChainClientState(chain::ChainClient::new(4)));
+
+            // Initialize ΣCORE nervous system
+            app.manage(SigmaCoreState {
+                memory: Mutex::new(core::sigma::memory::AssociativeMemory::default_dim()),
+                swarm: Mutex::new(core::sigma::swarm::Swarm::default_harvest()),
+                dynamics: core::sigma::dynamics::DynamicsEngine::new(),
+                compression: Mutex::new(core::sigma::compression::CompressionPipeline::new(50)),
+                codebook: Mutex::new(core::sigma::vectors::Codebook::new(256)),
+                dynamics_enabled: Mutex::new(true),
+            });
+
+            tracing::info!("ΣCORE nervous system initialized (8 swarm agents, dim=256)");
             tracing::info!("Application setup complete");
             Ok(())
         })
@@ -53,6 +83,33 @@ pub fn run() {
             ipc::commands::list_wallets,
             ipc::commands::derive_next_wallet,
             ipc::commands::has_vault,
+            ipc::commands::get_balances,
+            ipc::commands::get_gas_prices,
+            ipc::commands::get_chain_configs,
+            // ΣCORE read-only
+            ipc::commands::get_sigma_status,
+            ipc::commands::get_swarm_summary,
+            ipc::commands::sigma_wave_score,
+            // ΣCORE mutations
+            ipc::commands::sigma_encode_and_store,
+            ipc::commands::sigma_memory_query,
+            ipc::commands::sigma_memory_reinforce,
+            ipc::commands::sigma_memory_evict,
+            ipc::commands::sigma_memory_labels,
+            ipc::commands::sigma_swarm_vote,
+            ipc::commands::sigma_swarm_evolve,
+            ipc::commands::sigma_swarm_set_mutation_rate,
+            ipc::commands::sigma_compression_push,
+            ipc::commands::sigma_compression_search,
+            ipc::commands::sigma_hurst_analysis,
+            // ΣCORE orchestration
+            ipc::commands::sigma_evaluate_opportunity,
+            ipc::commands::sigma_record_outcome,
+            ipc::commands::sigma_toggle_dynamics,
+            // Discovery + Evaluation Pipeline
+            ipc::commands::discover_opportunities,
+            ipc::commands::evaluate_full_pipeline,
+            ipc::commands::run_hunt_cycle,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ΣHARVEST");

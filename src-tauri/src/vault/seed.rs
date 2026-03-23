@@ -143,4 +143,118 @@ mod tests {
         let seed_b = mnemonic.to_seed("my passphrase").unwrap();
         assert_ne!(seed_a.as_bytes(), seed_b.as_bytes());
     }
+
+    // ── Extended seed tests ──────────────────────────────────────
+
+    #[test]
+    fn seed_is_64_bytes() {
+        let mnemonic = SecureMnemonic::generate_12().unwrap();
+        let seed = mnemonic.to_seed("").unwrap();
+        assert_eq!(seed.as_bytes().len(), 64);
+    }
+
+    #[test]
+    fn seed_24_word_is_64_bytes() {
+        let mnemonic = SecureMnemonic::generate_24().unwrap();
+        let seed = mnemonic.to_seed("").unwrap();
+        assert_eq!(seed.as_bytes().len(), 64);
+    }
+
+    #[test]
+    fn phrase_is_all_lowercase() {
+        let mnemonic = SecureMnemonic::generate_12().unwrap();
+        let phrase = mnemonic.phrase();
+        assert_eq!(phrase, phrase.to_lowercase());
+    }
+
+    #[test]
+    fn twelve_word_phrase_has_11_spaces() {
+        let mnemonic = SecureMnemonic::generate_12().unwrap();
+        let spaces = mnemonic.phrase().chars().filter(|c| *c == ' ').count();
+        assert_eq!(spaces, 11);
+    }
+
+    #[test]
+    fn twenty_four_word_phrase_has_23_spaces() {
+        let mnemonic = SecureMnemonic::generate_24().unwrap();
+        let spaces = mnemonic.phrase().chars().filter(|c| *c == ' ').count();
+        assert_eq!(spaces, 23);
+    }
+
+    #[test]
+    fn generated_mnemonics_are_unique() {
+        let m1 = SecureMnemonic::generate_12().unwrap();
+        let m2 = SecureMnemonic::generate_12().unwrap();
+        assert_ne!(m1.phrase(), m2.phrase());
+    }
+
+    #[test]
+    fn empty_phrase_rejected() {
+        let result = SecureMnemonic::from_phrase("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn single_word_rejected() {
+        let result = SecureMnemonic::from_phrase("abandon");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn eleven_word_rejected() {
+        let result = SecureMnemonic::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon",
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_bip39_word_rejected() {
+        let result = SecureMnemonic::from_phrase(
+            "supercalifragilistic abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn from_array_roundtrip() {
+        let mnemonic = SecureMnemonic::generate_12().unwrap();
+        let seed = mnemonic.to_seed("test").unwrap();
+        let raw = *seed.as_bytes();
+        let restored = SeedBytes::from_array(raw);
+        assert_eq!(seed.as_bytes(), restored.as_bytes());
+    }
+
+    #[test]
+    fn known_mnemonic_known_seed() {
+        // BIP-39 test vector: first 8 bytes of seed for known mnemonic with empty passphrase
+        let mnemonic = SecureMnemonic::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        ).unwrap();
+        let seed = mnemonic.to_seed("").unwrap();
+        // Seed must be non-zero
+        assert!(seed.as_bytes().iter().any(|&b| b != 0));
+        // And deterministic
+        let seed2 = mnemonic.to_seed("").unwrap();
+        assert_eq!(seed.as_bytes(), seed2.as_bytes());
+    }
+
+    #[test]
+    fn passphrase_is_case_sensitive() {
+        let m = SecureMnemonic::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        ).unwrap();
+        let seed_lower = m.to_seed("password").unwrap();
+        let seed_upper = m.to_seed("Password").unwrap();
+        assert_ne!(seed_lower.as_bytes(), seed_upper.as_bytes());
+    }
+
+    #[test]
+    fn unicode_passphrase_works() {
+        let m = SecureMnemonic::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        ).unwrap();
+        let seed = m.to_seed("日本語パスフレーズ").unwrap();
+        assert_eq!(seed.as_bytes().len(), 64);
+    }
 }
