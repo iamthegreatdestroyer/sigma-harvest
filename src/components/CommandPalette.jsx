@@ -97,7 +97,10 @@ export default function CommandPalette() {
             >
               <Lock size={14} /> Lock Vault
             </Command.Item>
-            <Command.Item className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text">
+            <Command.Item
+              onSelect={() => runAction(() => useAppStore.getState().setActiveView("wallets"))}
+              className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text"
+            >
               <ArrowRightLeft size={14} /> Consolidate Funds
             </Command.Item>
           </Command.Group>

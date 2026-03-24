@@ -318,7 +318,10 @@ export default function WalletManager() {
           />
           {balanceLoading ? "Loading..." : "Refresh Balances"}
         </button>
-        <button className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors">
+        <button
+          onClick={() => alert("Fund consolidation will be available in a future update.")}
+          className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors"
+        >
           <ArrowRightLeft size={12} /> Consolidate
         </button>
       </div>

@@ -261,6 +261,39 @@ export default function AnalyticsBay() {
       <div className="flex justify-end">
         <button
           disabled={!summary}
+          onClick={() => {
+            const rows = [
+              ["Sigma Harvest Analytics Report"],
+              ["Generated", new Date().toISOString()],
+              [],
+              ["Metric", "Value"],
+              ["Total Harvested (USD)", totalHarvested.toFixed(2)],
+              ["Gas Spent (USD)", gasSpent.toFixed(2)],
+              ["Net Profit (USD)", netProfit.toFixed(2)],
+              ["Total Claims", claimCount],
+              ["Success Rate", (successRate * 100).toFixed(1) + "%"],
+            ];
+            if (sourceAttribution?.length) {
+              rows.push([], ["Source Attribution"], ["Source", "Value (USD)", "Claims"]);
+              sourceAttribution.forEach((s) =>
+                rows.push([s.source ?? s.name ?? "Unknown", s.value_usd ?? 0, s.claim_count ?? 0])
+              );
+            }
+            if (chainBreakdown?.length) {
+              rows.push([], ["Chain Breakdown"], ["Chain", "Claims"]);
+              chainBreakdown.forEach((c) =>
+                rows.push([c.chain ?? c.name ?? "Unknown", c.claim_count ?? 0])
+              );
+            }
+            const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `sigma-harvest-report-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
           className="px-3 py-1.5 bg-surface-raised border border-border rounded text-xs text-text-muted hover:text-text transition-colors disabled:opacity-50"
         >
           Export CSV
