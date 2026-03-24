@@ -495,7 +495,7 @@ mod tests {
             swarm.agents[1].record_failure();
         }
 
-        let best_persona_before = swarm.agents[0].persona.clone();
+        let _best_persona_before = swarm.agents[0].persona.clone();
         swarm.evolve();
 
         // Agent 1 should have been evolved (generation > 0, reset stats)

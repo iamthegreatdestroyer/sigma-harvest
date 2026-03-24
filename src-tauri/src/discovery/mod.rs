@@ -169,13 +169,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn social_source_returns_not_implemented() {
+    async fn social_source_no_token_returns_empty() {
         let source = social::SocialSource {
             bearer_token: None,
         };
         assert_eq!(source.name(), "social");
-        let result = source.discover().await;
-        assert!(result.is_err());
+        let result = source.discover().await.unwrap();
+        assert!(result.is_empty());
     }
 
     // ── Error formatting ──────────────────────────────────────════
