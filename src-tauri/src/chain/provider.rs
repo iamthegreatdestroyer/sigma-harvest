@@ -84,6 +84,16 @@ impl ChainClient {
         }
     }
 
+    /// Public RPC call for use by other modules (e.g., simulation).
+    pub async fn rpc_call_public(
+        &self,
+        chain_config: &ChainConfig,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, ChainClientError> {
+        self.rpc_call(chain_config, method, params).await
+    }
+
     /// Make a JSON-RPC call with automatic failover across a chain's RPC URLs.
     async fn rpc_call(
         &self,

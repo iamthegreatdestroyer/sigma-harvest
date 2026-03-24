@@ -41,6 +41,9 @@ uuid = { version = "1", features = ["v4", "serde"] }
 hex = "0.4"
 base64 = "0.22"
 rand = "0.8"
+dotenvy = "0.15"
+headless_chrome = "1"
+tauri-plugin-notification = "2"
 
 [features]
 default = ["custom-protocol"]

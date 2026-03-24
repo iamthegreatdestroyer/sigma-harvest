@@ -1037,3 +1037,75 @@ pub fn process_claim_batch(
 ) -> Result<crate::executor::ExecutionBatchResult, String> {
     Ok(crate::executor::process_batch(&mut claims, gas_ok, simulation_ok))
 }
+
+// ═══════════════════════════════════════════════════════════
+// ── Config IPC Commands ───────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Get a configuration value by key.
+#[tauri::command]
+pub fn get_config(
+    key: String,
+    db: State<'_, DbState>,
+) -> Result<Option<String>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    db::load_config(&conn, &key).map_err(|e| e.to_string())
+}
+
+/// Set a configuration value.
+#[tauri::command]
+pub fn set_config(
+    key: String,
+    value: String,
+    db: State<'_, DbState>,
+) -> Result<(), String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    db::save_config(&conn, &key, &value).map_err(|e| e.to_string())
+}
+
+/// Get all configuration key-value pairs.
+#[tauri::command]
+pub fn get_all_config(
+    db: State<'_, DbState>,
+) -> Result<Vec<(String, String)>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    db::load_all_config(&conn).map_err(|e| e.to_string())
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── Simulation IPC Commands ───────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Simulate a claim transaction via eth_call before real execution.
+/// Returns a safety report — the frontend should block if safe_to_proceed is false.
+#[tauri::command]
+pub async fn simulate_claim(
+    chain: String,
+    chain_id: u64,
+    from: String,
+    to: String,
+    calldata: String,
+    nonce: u64,
+    max_fee_gwei: f64,
+    max_priority_gwei: f64,
+    gas_limit: u64,
+    oracle_gas_estimate: Option<u64>,
+    client: State<'_, ChainClientState>,
+) -> Result<crate::executor::simulation::SimulationReport, String> {
+    let tx = crate::executor::transaction::build_claim_transaction(
+        &chain,
+        chain_id,
+        &from,
+        &to,
+        &calldata,
+        nonce,
+        max_fee_gwei,
+        max_priority_gwei,
+        gas_limit,
+    )
+    .map_err(|e| e.to_string())?;
+
+    crate::executor::simulation::simulate_transaction(&tx, &client.0, oracle_gas_estimate)
+        .await
+        .map_err(|e| e.to_string())
+}

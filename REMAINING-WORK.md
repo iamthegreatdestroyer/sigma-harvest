@@ -1,9 +1,9 @@
 # ΣHARVEST — Remaining Work for Fully Functioning Desktop App
 
-> Audit date: 2026-03-24  
-> Auditor: Copilot Agent (APEX-01)  
-> Codebase state: **Zero stubs remaining** — 39 Rust files, 27 JS/JSX files, all real implementations  
-> Tests: **137/137 JS tests pass**, comprehensive Rust test suites across all modules  
+> Audit date: 2026-03-24
+> Auditor: Copilot Agent (APEX-01)
+> Codebase state: **Zero stubs remaining** — 39 Rust files, 27 JS/JSX files, all real implementations
+> Tests: **137/137 JS tests pass**, comprehensive Rust test suites across all modules
 > Build: **Clean** (Vite + Cargo)
 
 ---
@@ -65,8 +65,8 @@
 These are the features that prevent the app from operating end-to-end autonomously.
 
 #### 1. Transaction Simulation (`executor/simulation.rs`)
-**What**: Before broadcast, every claim transaction must be simulated via `eth_call` to detect reverts, check gas, and flag suspicious outcomes.  
-**Why critical**: Without this, real transactions with real gas can fail or interact with malicious contracts.  
+**What**: Before broadcast, every claim transaction must be simulated via `eth_call` to detect reverts, check gas, and flag suspicious outcomes.
+**Why critical**: Without this, real transactions with real gas can fail or interact with malicious contracts.
 **Scope**:
 - [ ] `eth_call` simulation with full state override
 - [ ] ABI revert reason decoding (already partially in `transaction.rs`)
@@ -76,8 +76,8 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Integration with existing `ClaimPipeline` in `executor/mod.rs`
 
 #### 2. Settings View (`src/views/Settings.jsx` + `src/stores/settingsStore.js`)
-**What**: No UI currently exists to configure RPC endpoints, gas ceilings, API keys, auto-lock timeout, or notification preferences.  
-**Why critical**: Users must currently edit `.env.local` or `.env` files manually — the app has no way to persist runtime config changes.  
+**What**: No UI currently exists to configure RPC endpoints, gas ceilings, API keys, auto-lock timeout, or notification preferences.
+**Why critical**: Users must currently edit `.env.local` or `.env` files manually — the app has no way to persist runtime config changes.
 **Scope**:
 - [ ] New `Settings.jsx` view added to sidebar navigation
 - [ ] `settingsStore.js` Zustand store backed by Tauri `get_config`/`set_config` IPC commands
@@ -90,8 +90,8 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Sidebar nav entry with Settings/gear icon
 
 #### 3. Environment Variable Loading (Backend)
-**What**: The Rust backend needs to read `.env.local` for API keys and RPC endpoint overrides.  
-**Why critical**: Discovery sources like DappRadar, Twitter/X, and CoinGecko fail silently without API keys — users need a way to provide them.  
+**What**: The Rust backend needs to read `.env.local` for API keys and RPC endpoint overrides.
+**Why critical**: Discovery sources like DappRadar, Twitter/X, and CoinGecko fail silently without API keys — users need a way to provide them.
 **Scope**:
 - [ ] Add `dotenvy` crate to Cargo.toml
 - [ ] Load `.env.local` at startup in `lib.rs`
@@ -100,8 +100,8 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Add `get_config` / `set_config` IPC commands backed by DB `config` table
 
 #### 4. Token Consolidation Backend (`executor/consolidation.rs`)
-**What**: The Consolidate button in WalletManager currently shows a placeholder alert. Needs a backend module to sweep ERC-20 and native tokens from HD-derived wallets to a designated cold wallet.  
-**Why critical**: Core feature described in the blueprint — without it, claimed tokens stay scattered across many derived wallets.  
+**What**: The Consolidate button in WalletManager currently shows a placeholder alert. Needs a backend module to sweep ERC-20 and native tokens from HD-derived wallets to a designated cold wallet.
+**Why critical**: Core feature described in the blueprint — without it, claimed tokens stay scattered across many derived wallets.
 **Scope**:
 - [ ] `executor/consolidation.rs` — sweep logic for ETH/native + ERC-20 tokens
 - [ ] ERC-20 balance detection across wallet constellation (multicall batch)
@@ -116,7 +116,7 @@ These are the features that prevent the app from operating end-to-end autonomous
 ### TIER 2: Important UX & Safety Features (Required for comfortable daily use)
 
 #### 5. Desktop Notifications (Tauri Notification Plugin)
-**What**: Alert user when high-score opportunities are discovered or claims succeed/fail.  
+**What**: Alert user when high-score opportunities are discovered or claims succeed/fail.
 **Scope**:
 - [ ] Add `@tauri-apps/plugin-notification` to frontend deps
 - [ ] Add `tauri-plugin-notification` to Cargo.toml
@@ -125,7 +125,7 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Notification toggle in Settings view
 
 #### 6. Keyboard Shortcuts
-**What**: Power-user keyboard navigation described in Stage 7 of ROLLOUT-PLAN.  
+**What**: Power-user keyboard navigation described in Stage 7 of ROLLOUT-PLAN.
 **Scope**:
 - [ ] `Alt+1` through `Alt+5` — Navigate to views
 - [ ] `Ctrl+K` — Command palette (may already work via cmdk)
@@ -134,14 +134,14 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Help overlay (`?` key) showing all shortcuts
 
 #### 7. Auto-Lock Timeout
-**What**: Vault should auto-lock after configurable idle timeout.  
+**What**: Vault should auto-lock after configurable idle timeout.
 **Scope**:
 - [ ] Idle timer in `walletStore.js` (reset on any user interaction)
 - [ ] Configurable duration in Settings view
 - [ ] Calls `lockVault()` on timeout
 
 #### 8. Token Price Fetching (CoinGecko)
-**What**: Currently, analytics and wallet balances are only in native ETH amounts — no USD conversion.  
+**What**: Currently, analytics and wallet balances are only in native ETH amounts — no USD conversion.
 **Scope**:
 - [ ] CoinGecko free API client in Rust (simple price endpoint)
 - [ ] `get_token_prices` IPC command
@@ -153,8 +153,8 @@ These are the features that prevent the app from operating end-to-end autonomous
 ### TIER 3: Execution Engine Completion (Required for fully autonomous claiming)
 
 #### 9. Headless Browser Module (`executor/browser.rs`)
-**What**: Some claim pages require JavaScript execution, wallet connection simulation, or multi-step UI flows.  
-**Why**: Standard `eth_call` + raw transaction won't work for these — need headless Chrome.  
+**What**: Some claim pages require JavaScript execution, wallet connection simulation, or multi-step UI flows.
+**Why**: Standard `eth_call` + raw transaction won't work for these — need headless Chrome.
 **Scope**:
 - [ ] Add `headless_chrome` crate to Cargo.toml
 - [ ] `executor/browser.rs` — Chrome DevTools Protocol integration
@@ -165,7 +165,7 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Integration with `ClaimPipeline::BrowserClaim` strategy
 
 #### 10. Dashboard Sparkline Charts
-**What**: Blueprint calls for 24h/7d/30d sparkline charts on the Command Center dashboard.  
+**What**: Blueprint calls for 24h/7d/30d sparkline charts on the Command Center dashboard.
 **Scope**:
 - [ ] Time-series data endpoint in analytics backend
 - [ ] Small Recharts sparkline components
@@ -176,14 +176,14 @@ These are the features that prevent the app from operating end-to-end autonomous
 ### TIER 4: Hardening & Release (Required before tagging v1.0)
 
 #### 11. E2E Testing
-**What**: Currently only unit tests exist. Need integration tests for full user flows.  
+**What**: Currently only unit tests exist. Need integration tests for full user flows.
 **Scope**:
 - [ ] Tauri WebDriver test: create vault → derive wallet → start hunt → view results
 - [ ] Property-based tests for crypto operations (proptest crate)
 - [ ] Rust integration tests with mock RPC responses
 
 #### 12. Security Audit
-**What**: Formal review of crypto operations and IPC boundary.  
+**What**: Formal review of crypto operations and IPC boundary.
 **Scope**:
 - [ ] `cargo audit` — check for known CVEs
 - [ ] `pnpm audit` — frontend dependency check
@@ -192,7 +192,7 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] Verify: no telemetry, no analytics, no phone-home
 
 #### 13. Auto-Updater
-**What**: Tauri has a built-in updater plugin for checking GitHub Releases.  
+**What**: Tauri has a built-in updater plugin for checking GitHub Releases.
 **Scope**:
 - [ ] Add `tauri-plugin-updater` to Cargo.toml
 - [ ] Configure update endpoint to `github.com/iamthegreatdestroyer/sigma-harvest/releases`
@@ -200,7 +200,7 @@ These are the features that prevent the app from operating end-to-end autonomous
 - [ ] background check on app launch
 
 #### 14. Performance Profiling
-**What**: Verify the app runs well under sustained operation.  
+**What**: Verify the app runs well under sustained operation.
 **Scope**:
 - [ ] Startup time profiling (target < 2s to render)
 - [ ] 24h soak test under continuous discovery

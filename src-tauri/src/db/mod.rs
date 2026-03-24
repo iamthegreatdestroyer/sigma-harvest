@@ -113,6 +113,15 @@ pub fn load_config(conn: &Connection, key: &str) -> Result<Option<String>, DbErr
     }
 }
 
+/// Load all config key-value pairs.
+pub fn load_all_config(conn: &Connection) -> Result<Vec<(String, String)>, DbError> {
+    let mut stmt = conn.prepare("SELECT key, value FROM config ORDER BY key")?;
+    let pairs = stmt
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(pairs)
+}
+
 /// A wallet record from the database.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct WalletRecord {

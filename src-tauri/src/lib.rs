@@ -13,6 +13,13 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tracing_subscriber::EnvFilter;
 
+/// Load .env.local and .env files for API keys and RPC overrides.
+fn load_env_files() {
+    // .env.local takes priority
+    let _ = dotenvy::from_filename(".env.local");
+    let _ = dotenvy::dotenv();
+}
+
 /// Shared state wrapper for the chain RPC client.
 pub struct ChainClientState(pub chain::ChainClient);
 
@@ -38,8 +45,12 @@ pub fn run() {
 
     tracing::info!("ΣHARVEST v{} starting up", env!("CARGO_PKG_VERSION"));
 
+    // Load environment variables from .env.local / .env
+    load_env_files();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Initialize database in the app data directory
             let app_data = app
@@ -117,6 +128,12 @@ pub fn run() {
             // Executor
             ipc::commands::check_gas_conditions,
             ipc::commands::process_claim_batch,
+            // Config
+            ipc::commands::get_config,
+            ipc::commands::set_config,
+            ipc::commands::get_all_config,
+            // Simulation
+            ipc::commands::simulate_claim,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ΣHARVEST");

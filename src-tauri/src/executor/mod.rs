@@ -1,5 +1,6 @@
 pub mod gas_oracle;
 pub mod queue;
+pub mod simulation;
 pub mod transaction;
 
 use serde::{Deserialize, Serialize};
