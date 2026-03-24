@@ -93,5 +93,10 @@ export const useHuntStore = create((set, get) => ({
     }
   },
 
+  setGasCeiling: (chain, value) =>
+    set((state) => ({
+      gasCeiling: { ...state.gasCeiling, [chain]: value },
+    })),
+
   clearEvaluations: () => set({ evaluations: [], huntResult: null }),
 }));

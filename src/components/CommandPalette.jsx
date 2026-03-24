@@ -1,5 +1,7 @@
 import { Command } from "cmdk";
 import { useAppStore } from "../stores/appStore";
+import { useHuntStore } from "../stores/huntStore";
+import { useWalletStore } from "../stores/walletStore";
 import {
   LayoutDashboard,
   Crosshair,
@@ -83,10 +85,16 @@ export default function CommandPalette() {
             heading="Actions"
             className="text-[10px] text-text-dim uppercase tracking-wider px-2 py-1"
           >
-            <Command.Item className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text">
+            <Command.Item
+              onSelect={() => runAction(() => useHuntStore.getState().runHuntCycle())}
+              className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text"
+            >
               <Play size={14} /> Start Hunt
             </Command.Item>
-            <Command.Item className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text">
+            <Command.Item
+              onSelect={() => runAction(() => useWalletStore.getState().lockVault())}
+              className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text"
+            >
               <Lock size={14} /> Lock Vault
             </Command.Item>
             <Command.Item className="flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:bg-surface-raised hover:text-text cursor-pointer data-[selected=true]:bg-surface-raised data-[selected=true]:text-text">

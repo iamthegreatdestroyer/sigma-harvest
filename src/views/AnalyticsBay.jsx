@@ -59,11 +59,11 @@ export default function AnalyticsBay() {
     fetchAll();
   }, [fetchAll]);
 
-  const totalHarvested = summary?.total_harvested_usd ?? 0;
+  const totalHarvested = summary?.total_value_collected_usd ?? 0;
   const gasSpent = summary?.total_gas_spent_usd ?? 0;
   const netProfit = totalHarvested - gasSpent;
   const claimCount = summary?.total_claims ?? 0;
-  const successRate = summary?.success_rate ?? 0;
+  const successRate = claimCount > 0 ? (summary?.successful_claims ?? 0) / claimCount : 0;
 
   const metrics = [
     {
@@ -82,7 +82,7 @@ export default function AnalyticsBay() {
       label: "Net Profit",
       value: fmt(netProfit),
       icon: TrendingUp,
-      color: netProfit >= 0 ? "text-accent" : "text-error",
+      color: netProfit >= 0 ? "text-accent" : "text-danger",
     },
   ];
 
@@ -112,7 +112,7 @@ export default function AnalyticsBay() {
 
       {/* Error Banner */}
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-error/10 border border-error/30 text-error text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm">
           <AlertCircle size={16} />
           <span>{error}</span>
         </div>
@@ -176,7 +176,7 @@ export default function AnalyticsBay() {
               <PieChart>
                 <Pie
                   data={sourceAttribution}
-                  dataKey="count"
+                  dataKey="claim_count"
                   nameKey="source"
                   cx="50%"
                   cy="50%"
@@ -237,7 +237,7 @@ export default function AnalyticsBay() {
                     color: "var(--color-text)",
                   }}
                 />
-                <Bar dataKey="opportunity_count" name="Opportunities" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="claim_count" name="Opportunities" radius={[4, 4, 0, 0]}>
                   {chainBreakdown.map((_, i) => (
                     <Cell
                       key={i}
