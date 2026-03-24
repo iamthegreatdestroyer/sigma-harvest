@@ -65,10 +65,13 @@ mod tests {
             opportunity_id: format!("opp-{}", id),
             wallet_address: "0xABC".to_string(),
             chain: "ethereum".to_string(),
+            contract_address: Some("0xDef".to_string()),
+            calldata: Some("0xa9059cbb".to_string()),
             status: ClaimStatus::Pending,
             gas_limit: Some(21000),
             retry_count: 0,
             max_retries: 3,
+            harvest_score: 50,
         }
     }
 

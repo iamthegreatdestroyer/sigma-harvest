@@ -110,6 +110,13 @@ pub fn run() {
             ipc::commands::discover_opportunities,
             ipc::commands::evaluate_full_pipeline,
             ipc::commands::run_hunt_cycle,
+            // Analytics
+            ipc::commands::get_analytics_summary,
+            ipc::commands::get_source_attribution,
+            ipc::commands::get_chain_breakdown,
+            // Executor
+            ipc::commands::check_gas_conditions,
+            ipc::commands::process_claim_batch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ΣHARVEST");

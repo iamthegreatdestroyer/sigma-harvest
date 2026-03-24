@@ -156,13 +156,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn onchain_source_returns_not_implemented() {
+    async fn onchain_source_empty_watchlist_returns_empty() {
         let source = onchain::OnChainSource {
             rpc_url: "https://eth.llamarpc.com".into(),
+            chain: "ethereum".to_string(),
+            watchlist: vec![],
+            lookback_blocks: 100,
         };
         assert_eq!(source.name(), "onchain");
-        let result = source.discover().await;
-        assert!(result.is_err());
+        let result = source.discover().await.unwrap();
+        assert!(result.is_empty());
     }
 
     #[tokio::test]

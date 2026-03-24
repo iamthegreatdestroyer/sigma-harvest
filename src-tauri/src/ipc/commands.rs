@@ -651,6 +651,9 @@ pub async fn discover_opportunities(
             "onchain" => {
                 let source = crate::discovery::onchain::OnChainSource {
                     rpc_url: "https://eth.llamarpc.com".to_string(),
+                    chain: "ethereum".to_string(),
+                    watchlist: vec![],
+                    lookback_blocks: 100,
                 };
                 source.discover().await
             }
@@ -968,4 +971,69 @@ fn evaluate_single_opportunity(
         gas_cost_estimate: opp.gas_cost_estimate,
         url: opp.url.clone(),
     })
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── Analytics IPC Commands ────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Get the current analytics summary (ROI, claims, etc.).
+#[tauri::command]
+pub fn get_analytics_summary(
+    db: State<'_, DbState>,
+) -> Result<crate::analytics::AnalyticsSummary, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    Ok(crate::analytics::reports::generate_summary(&conn))
+}
+
+/// Get source attribution — which discovery sources produce the most value.
+#[tauri::command]
+pub fn get_source_attribution(
+    db: State<'_, DbState>,
+) -> Result<Vec<crate::analytics::SourceAttribution>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    Ok(crate::analytics::reports::source_attribution(&conn))
+}
+
+/// Get chain breakdown — claim stats per chain.
+#[tauri::command]
+pub fn get_chain_breakdown(
+    db: State<'_, DbState>,
+) -> Result<Vec<crate::analytics::ChainBreakdown>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    Ok(crate::analytics::reports::chain_breakdown(&conn))
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── Executor IPC Commands ─────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Evaluate gas conditions for a chain before claiming.
+#[tauri::command]
+pub async fn check_gas_conditions(
+    chain: String,
+    ceiling_gwei: f64,
+    estimated_gas_usd: f64,
+    client: State<'_, ChainClientState>,
+) -> Result<crate::executor::gas_oracle::GasDecision, String> {
+    let price = crate::executor::gas_oracle::fetch_gas_price(&chain, &client.0)
+        .await
+        .map_err(|e| e.to_string())?;
+    let tracker = crate::executor::gas_oracle::SpendingTracker::new(50.0);
+    Ok(crate::executor::gas_oracle::evaluate_gas_conditions(
+        &price,
+        ceiling_gwei,
+        &tracker,
+        estimated_gas_usd,
+    ))
+}
+
+/// Process a batch of claims through the execution pipeline.
+#[tauri::command]
+pub fn process_claim_batch(
+    mut claims: Vec<crate::executor::ClaimOperation>,
+    gas_ok: bool,
+    simulation_ok: bool,
+) -> Result<crate::executor::ExecutionBatchResult, String> {
+    Ok(crate::executor::process_batch(&mut claims, gas_ok, simulation_ok))
 }
