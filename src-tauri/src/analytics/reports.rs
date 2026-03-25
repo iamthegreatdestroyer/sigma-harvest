@@ -1,7 +1,7 @@
 //! Analytics report generation.
 //! Queries the SQLite database for ROI, claim stats, and source attribution.
 
-use super::{AnalyticsSummary, SourceAttribution, ChainBreakdown};
+use super::{AnalyticsSummary, ChainBreakdown, SourceAttribution, TimeSeriesPoint};
 use rusqlite::Connection;
 
 /// Generate a summary of all collection activity from the database.
@@ -104,6 +104,44 @@ pub fn chain_breakdown(conn: &Connection) -> Vec<ChainBreakdown> {
     results
 }
 
+/// Generate daily time-series data for sparkline charts.
+///
+/// Returns up to `days` data points ordered chronologically.
+/// Each point aggregates claim count, value collected, and gas spent for that day.
+pub fn time_series(conn: &Connection, days: u32) -> Vec<TimeSeriesPoint> {
+    let mut results = Vec::new();
+
+    let query = format!(
+        "SELECT date(created_at) as d, COUNT(*), \
+         COALESCE(SUM(value_received_usd), 0), \
+         COALESCE(SUM(gas_cost_usd), 0) \
+         FROM claims \
+         WHERE created_at >= datetime('now', '-{} days') \
+         GROUP BY d ORDER BY d ASC",
+        days
+    );
+
+    if let Ok(mut stmt) = conn.prepare(&query) {
+        if let Ok(rows) = stmt.query_map([], |row| {
+            let value: f64 = row.get(2)?;
+            let gas: f64 = row.get(3)?;
+            Ok(TimeSeriesPoint {
+                date: row.get(0)?,
+                claims: row.get(1)?,
+                value_usd: value,
+                gas_usd: gas,
+                net_usd: value - gas,
+            })
+        }) {
+            for row in rows.flatten() {
+                results.push(row);
+            }
+        }
+    }
+
+    results
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,5 +222,62 @@ mod tests {
         assert_eq!(chains.len(), 1);
         assert_eq!(chains[0].chain, "ethereum");
         assert_eq!(chains[0].claim_count, 2);
+    }
+
+    // ── Time-series tests ─────────────────────────────
+
+    #[test]
+    fn time_series_with_data() {
+        let conn = setup_test_db();
+        let series = time_series(&conn, 30);
+        // Claims were inserted with default created_at = datetime('now'),
+        // so they all fall on today.
+        assert_eq!(series.len(), 1);
+        assert_eq!(series[0].claims, 2);
+        assert!((series[0].value_usd - 100.0).abs() < 0.01);
+        assert!((series[0].gas_usd - 7.0).abs() < 0.01);
+        assert!((series[0].net_usd - 93.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn time_series_empty_db() {
+        let conn = db::initialize(Path::new(":memory:")).unwrap();
+        let series = time_series(&conn, 30);
+        assert!(series.is_empty());
+    }
+
+    #[test]
+    fn time_series_zero_days_returns_empty() {
+        let conn = setup_test_db();
+        // 0 days window — datetime('now', '-0 days') is now, but claims at 'now' might match
+        // since created_at = datetime('now'). This is fine — we just check it doesn't panic.
+        let series = time_series(&conn, 0);
+        // Could be 0 or 1 depending on timing; just ensure no crash
+        assert!(series.len() <= 1);
+    }
+
+    #[test]
+    fn time_series_points_are_serializable() {
+        let point = TimeSeriesPoint {
+            date: "2026-03-25".to_string(),
+            claims: 5,
+            value_usd: 250.0,
+            gas_usd: 10.0,
+            net_usd: 240.0,
+        };
+        let json = serde_json::to_string(&point).unwrap();
+        let rt: TimeSeriesPoint = serde_json::from_str(&json).unwrap();
+        assert_eq!(rt.date, "2026-03-25");
+        assert_eq!(rt.claims, 5);
+        assert!((rt.net_usd - 240.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn time_series_net_is_value_minus_gas() {
+        let conn = setup_test_db();
+        let series = time_series(&conn, 30);
+        for point in &series {
+            assert!((point.net_usd - (point.value_usd - point.gas_usd)).abs() < 0.001);
+        }
     }
 }

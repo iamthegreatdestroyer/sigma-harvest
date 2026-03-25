@@ -22,6 +22,7 @@ import { useAppStore } from "./stores/appStore";
 import { useWalletStore } from "./stores/walletStore";
 import { useSettingsStore } from "./stores/settingsStore";
 import { useHuntStore } from "./stores/huntStore";
+import { initNotifications } from "./lib/notifications";
 
 const NAV_ITEMS = [
   {
@@ -75,6 +76,7 @@ export default function App() {
   useEffect(() => {
     fetchVaultStatus();
     loadSettingsFromStore();
+    initNotifications();
   }, [fetchVaultStatus, loadSettingsFromStore]);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);

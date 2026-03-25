@@ -5,6 +5,7 @@ const useAnalyticsStore = create((set, get) => ({
   summary: null,
   sourceAttribution: [],
   chainBreakdown: [],
+  timeSeries: [],
   loading: false,
   error: null,
 
@@ -41,14 +42,24 @@ const useAnalyticsStore = create((set, get) => ({
   fetchAll: async () => {
     set({ loading: true, error: null });
     try {
-      const [summary, sourceAttribution, chainBreakdown] = await Promise.all([
+      const [summary, sourceAttribution, chainBreakdown, timeSeries] = await Promise.all([
         invoke("get_analytics_summary"),
         invoke("get_source_attribution"),
         invoke("get_chain_breakdown"),
+        invoke("get_time_series", { days: 30 }),
       ]);
-      set({ summary, sourceAttribution, chainBreakdown, loading: false });
+      set({ summary, sourceAttribution, chainBreakdown, timeSeries, loading: false });
     } catch (e) {
       set({ error: e.toString(), loading: false });
+    }
+  },
+
+  fetchTimeSeries: async (days = 30) => {
+    try {
+      const timeSeries = await invoke("get_time_series", { days });
+      set({ timeSeries });
+    } catch (e) {
+      set({ error: e.toString() });
     }
   },
 }));

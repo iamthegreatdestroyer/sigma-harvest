@@ -1172,3 +1172,18 @@ pub async fn get_chain_price_usd(
 ) -> Result<f64, String> {
     price_client.0.get_chain_price(&chain).await.map_err(|e| e.to_string())
 }
+
+// ═══════════════════════════════════════════════════════════
+// ── Time-Series Analytics ─────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Get daily time-series claim data for sparkline charts.
+/// Returns data points for the specified number of days.
+#[tauri::command]
+pub fn get_time_series(
+    days: u32,
+    db: State<'_, DbState>,
+) -> Result<Vec<crate::analytics::TimeSeriesPoint>, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    Ok(crate::analytics::reports::time_series(&conn, days))
+}

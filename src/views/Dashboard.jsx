@@ -1,19 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { LayoutDashboard, TrendingUp, Zap, Activity, Lock, Unlock, Wallet } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import GasTicker from "../components/GasTicker";
 import HarvestFeed from "../components/HarvestFeed";
 import SigmaCoreWidget from "../components/SigmaCoreWidget";
+import SparklineChart from "../components/SparklineChart";
 import { useWalletStore } from "../stores/walletStore";
 
 export default function Dashboard() {
   const { vaultLocked, wallets, fetchVaultStatus } = useWalletStore();
   const [appStatus, setAppStatus] = useState(null);
+  const [timeSeries, setTimeSeries] = useState({ "7": [], "30": [] });
+  const [timeRange, setTimeRange] = useState("7");
+
+  const fetchTimeSeries = useCallback(async () => {
+    try {
+      const [week, month] = await Promise.all([
+        invoke("get_time_series", { days: 7 }),
+        invoke("get_time_series", { days: 30 }),
+      ]);
+      setTimeSeries({ "7": week, "30": month });
+    } catch {
+      // Time-series fetch is non-critical
+    }
+  }, []);
 
   useEffect(() => {
     fetchVaultStatus();
     invoke("get_app_status").then(setAppStatus).catch(console.error);
-  }, [fetchVaultStatus]);
+    fetchTimeSeries();
+  }, [fetchVaultStatus, fetchTimeSeries]);
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
@@ -73,6 +89,71 @@ export default function Dashboard() {
       </div>
 
       {/* Two-column layout */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Sparkline: Value Collected */}
+        <div className="bg-surface rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-text-muted text-[11px] uppercase tracking-wider">
+              Value Collected
+            </span>
+            <div className="flex gap-1">
+              {["7", "30"].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setTimeRange(r)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    timeRange === r
+                      ? "bg-primary/20 text-primary"
+                      : "text-text-muted hover:text-text"
+                  }`}
+                >
+                  {r}d
+                </button>
+              ))}
+            </div>
+          </div>
+          <SparklineChart
+            data={timeSeries[timeRange].map((p) => ({
+              date: p.date,
+              value: p.value_usd,
+            }))}
+            color="#00e5ff"
+            dataKey="value"
+          />
+        </div>
+
+        {/* Sparkline: Gas Spent */}
+        <div className="bg-surface rounded-lg border border-border p-4">
+          <span className="text-text-muted text-[11px] uppercase tracking-wider block mb-1">
+            Gas Spent
+          </span>
+          <SparklineChart
+            data={timeSeries[timeRange].map((p) => ({
+              date: p.date,
+              value: p.gas_usd,
+            }))}
+            color="#ff6b6b"
+            dataKey="value"
+          />
+        </div>
+
+        {/* Sparkline: Net Profit */}
+        <div className="bg-surface rounded-lg border border-border p-4">
+          <span className="text-text-muted text-[11px] uppercase tracking-wider block mb-1">
+            Net Profit
+          </span>
+          <SparklineChart
+            data={timeSeries[timeRange].map((p) => ({
+              date: p.date,
+              value: p.net_usd,
+            }))}
+            color="#51cf66"
+            dataKey="value"
+          />
+        </div>
+      </div>
+
+      {/* Two-column layout: Feed + Gas/ΣCORE */}
       <div className="grid grid-cols-2 gap-4">
         {/* Harvest Feed */}
         <div className="bg-surface rounded-lg border border-border p-4">

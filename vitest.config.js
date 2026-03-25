@@ -12,6 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@tauri-apps/api/core": new URL("./src/__tests__/__mocks__/tauri.js", import.meta.url).pathname,
+      "@tauri-apps/plugin-notification": new URL("./src/__tests__/__mocks__/notification.js", import.meta.url).pathname,
     },
   },
 });

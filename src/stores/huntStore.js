@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { notifyHighScore, notifyClaim } from "../lib/notifications";
 
 export const useHuntStore = create((set, get) => ({
   running: false,
@@ -48,6 +49,10 @@ export const useHuntStore = create((set, get) => ({
         dappradar_key: null,
       });
       set({ opportunities: result, loading: false });
+      // Notify for high-score opportunities
+      for (const opp of result) {
+        notifyHighScore(opp, 70, true);
+      }
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -85,6 +90,18 @@ export const useHuntStore = create((set, get) => ({
         dappradar_key: null,
       });
       set({ huntResult: result, evaluations: result.evaluations, loading: false, running: false });
+      // Notify for high-score evaluated opportunities
+      for (const ev of result.evaluations ?? []) {
+        notifyHighScore(ev, 70, true);
+      }
+      // Notify claim results if present
+      for (const claim of result.claims ?? []) {
+        const status = claim.status === "Confirmed" ? "success" : "failure";
+        const detail = status === "success"
+          ? `$${claim.value_received_usd?.toFixed(2) ?? "0.00"}`
+          : claim.error ?? "Unknown error";
+        notifyClaim(status, claim.title ?? "Claim", detail, true);
+      }
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

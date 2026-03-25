@@ -146,6 +146,8 @@ pub fn run() {
             // Prices
             ipc::commands::get_token_prices,
             ipc::commands::get_chain_price_usd,
+            // Time-series analytics
+            ipc::commands::get_time_series,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ΣHARVEST");

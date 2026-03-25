@@ -45,6 +45,16 @@ pub struct ChainBreakdown {
     pub total_gas_usd: f64,
 }
 
+/// A single data point for sparkline time-series charts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeSeriesPoint {
+    pub date: String,
+    pub claims: u64,
+    pub value_usd: f64,
+    pub gas_usd: f64,
+    pub net_usd: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
