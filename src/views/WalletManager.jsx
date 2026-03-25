@@ -192,12 +192,19 @@ export default function WalletManager() {
     deriveWallet,
     clearMnemonic,
     fetchVaultStatus,
+    planConsolidation,
+    consolidationPlan,
+    consolidationLoading,
+    consolidationError,
+    clearConsolidation,
   } = useWalletStore();
 
   const { balances, balanceLoading, fetchAllBalances } = useChainStore();
 
   const [deriveChain, setDeriveChain] = useState("ethereum");
   const [chainDropdownOpen, setChainDropdownOpen] = useState(false);
+  const [showConsolidation, setShowConsolidation] = useState(false);
+  const [consolidationDest, setConsolidationDest] = useState("");
 
   useEffect(() => {
     fetchVaultStatus();
@@ -319,12 +326,89 @@ export default function WalletManager() {
           {balanceLoading ? "Loading..." : "Refresh Balances"}
         </button>
         <button
-          onClick={() => alert("Fund consolidation will be available in a future update.")}
-          className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors"
+          onClick={() => setShowConsolidation(true)}
+          disabled={consolidationLoading || wallets.length < 2}
+          className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors disabled:opacity-40"
         >
-          <ArrowRightLeft size={12} /> Consolidate
+          <ArrowRightLeft size={12} />
+          {consolidationLoading ? "Scanning..." : "Consolidate"}
         </button>
       </div>
+
+      {/* Consolidation Modal */}
+      {showConsolidation && (
+        <div className="bg-surface rounded-lg border border-warning/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-warning flex items-center gap-2">
+              <ArrowRightLeft size={14} /> Fund Consolidation
+            </h3>
+            <button
+              onClick={() => { setShowConsolidation(false); clearConsolidation(); }}
+              className="text-text-dim text-xs hover:text-text"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-text-muted text-xs">
+            Scan all wallets and plan a sweep of native tokens to a destination
+            address. No transactions are sent — this is a dry run.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={consolidationDest}
+              onChange={(e) => setConsolidationDest(e.target.value)}
+              placeholder="0x destination address..."
+              className="flex-1 px-3 py-1.5 bg-bg border border-border rounded text-text text-xs font-mono focus:outline-none focus:border-warning"
+            />
+            <button
+              onClick={() =>
+                planConsolidation({
+                  destination: consolidationDest,
+                  chain: "ethereum",
+                  gasPriceGwei: 10,
+                })
+              }
+              disabled={
+                consolidationLoading ||
+                !consolidationDest.startsWith("0x") ||
+                consolidationDest.length !== 42
+              }
+              className="px-3 py-1.5 bg-warning/10 border border-warning/30 rounded text-warning text-xs hover:bg-warning/20 transition-colors disabled:opacity-40"
+            >
+              {consolidationLoading ? "Scanning..." : "Plan Sweep"}
+            </button>
+          </div>
+          {consolidationError && (
+            <p className="text-danger text-xs">{consolidationError}</p>
+          )}
+          {consolidationPlan && (
+            <div className="bg-bg rounded border border-border p-3 text-xs space-y-1">
+              <p className="text-text">
+                <span className="text-text-muted">Chain:</span>{" "}
+                {consolidationPlan.chain}
+              </p>
+              <p className="text-text">
+                <span className="text-text-muted">Sweepable wallets:</span>{" "}
+                <span className="text-primary">
+                  {consolidationPlan.candidates?.length ?? 0}
+                </span>
+              </p>
+              <p className="text-text">
+                <span className="text-text-muted">ERC-20 sweeps:</span>{" "}
+                {consolidationPlan.total_erc20_sweeps ?? 0}
+              </p>
+              <p className="text-text">
+                <span className="text-text-muted">Skipped (dust):</span>{" "}
+                {consolidationPlan.skipped_dust ?? 0}
+              </p>
+              <p className="text-accent text-xs mt-1">
+                Dry run complete — no transactions sent.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Wallet List */}
       <div className="space-y-2">

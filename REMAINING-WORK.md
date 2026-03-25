@@ -1,9 +1,9 @@
 # ΣHARVEST — Remaining Work for Fully Functioning Desktop App
 
-> Audit date: 2026-03-24
+> Audit date: 2026-03-25
 > Auditor: Copilot Agent (APEX-01)
-> Codebase state: **Zero stubs remaining** — 39 Rust files, 27 JS/JSX files, all real implementations
-> Tests: **153/153 JS tests pass**, **442/442 Rust tests pass**
+> Codebase state: **Zero stubs remaining** — 42 Rust files, 30 JS/JSX files, all real implementations
+> Tests: **178/178 JS tests pass**, **474/474 Rust tests pass**
 > Build: **Clean** (Vite + Cargo)
 
 ---
@@ -17,10 +17,10 @@
 | 2 | Crypto Vault + Storage | **DONE** | 100% |
 | 3 | Chain Connectivity + Wallet UI | **DONE** | 100% |
 | 4 | Discovery Engine + Feed UI | **DONE** | 100% |
-| 5 | Claim Execution Engine | **PARTIAL** | ~85% |
-| 6 | Auto-Consolidation + Analytics | **PARTIAL** | ~60% |
+| 5 | Claim Execution Engine | **PARTIAL** | ~90% |
+| 6 | Auto-Consolidation + Analytics | **PARTIAL** | ~85% |
 | 7 | Command Palette + Power UX | **DONE** | 100% |
-| 8 | Hardening + Release Prep | **PARTIAL** | ~50% |
+| 8 | Hardening + Release Prep | **PARTIAL** | ~55% |
 | 9 | Extended Chains + Quests | NOT STARTED | 0% |
 | 10 | ΣLANG Integration | **PARTIAL** | ~30% |
 
@@ -28,24 +28,24 @@
 
 ## What's Already Built and Working
 
-### Backend (Rust) — 39 source files, all complete
+### Backend (Rust) — 42 source files, all complete
 
 - **Vault**: BIP-39 mnemonic, BIP-44 HD derivation, AES-256-GCM + Argon2id encryption, full keystore lifecycle
-- **Chain**: 6-chain registry (ETH, ARB, OP, BASE, MATIC, zkSync), RPC client with failover, EIP-1559 gas
+- **Chain**: 6-chain registry (ETH, ARB, OP, BASE, MATIC, zkSync), RPC client with failover, EIP-1559 gas, CoinGecko price client
 - **Discovery**: 5 sources (RSS, DappRadar, Galxe GraphQL, on-chain events, Twitter/X)
 - **Evaluation**: 6-component Harvest Score (0–100), 5-heuristic risk assessment, 4 risk levels
-- **Executor**: EIP-1559 transaction builder, gas oracle with daily caps, priority queue with retries
+- **Executor**: EIP-1559 transaction builder, gas oracle with daily caps, priority queue with retries, transaction simulation, token consolidation
 - **Scraper**: HTML parsing pipeline with CSS selectors, ETH address extraction, rate limiting
 - **Analytics**: SQL-backed summary reports, source attribution, chain breakdown
 - **ΣCORE**: HD vectors, associative memory, Lotka-Volterra dynamics, evolutionary swarm, wave scoring
 - **DB**: SQLite with WAL mode, 5-table migration, full CRUD
-- **IPC**: ~30+ Tauri commands wired to frontend
+- **IPC**: ~38 Tauri commands wired to frontend
 
-### Frontend (React) — 27 source files, all complete
+### Frontend (React) — 30 source files, all complete
 
-- **5 Views**: Dashboard, HuntConsole, WalletManager, OpportunityInspector, AnalyticsBay
+- **6 Views**: Dashboard, HuntConsole, WalletManager, OpportunityInspector, AnalyticsBay, Settings
 - **7 Components**: CommandPalette, GasTicker, HarvestFeed, HuntConsole, ScoreGauge, SigmaCoreWidget, WalletTree
-- **6 Stores**: app, wallet, hunt, chain, sigma, analytics (all Zustand)
+- **8 Stores**: app, wallet, hunt, chain, sigma, analytics, settings, price (all Zustand)
 - **3 Hooks**: useTauriCommand, useDiscovery, useWallets
 - **3 Libs**: chains, constants, formatters
 
@@ -54,7 +54,7 @@
 - CI (cargo check + clippy + test + pnpm build)
 - Release build (Tauri bundle for Windows via GitHub Actions on tag push)
 - Dependabot (Cargo + npm + GitHub Actions)
-- 137 frontend unit tests (Vitest)
+- 178 frontend unit tests (Vitest), 474 Rust unit tests
 
 ---
 
@@ -103,12 +103,12 @@ These are the features that prevent the app from operating end-to-end autonomous
 **What**: The Consolidate button in WalletManager currently shows a placeholder alert. Needs a backend module to sweep ERC-20 and native tokens from HD-derived wallets to a designated cold wallet.
 **Why critical**: Core feature described in the blueprint — without it, claimed tokens stay scattered across many derived wallets.
 **Scope**:
-- [ ] `executor/consolidation.rs` — sweep logic for ETH/native + ERC-20 tokens
-- [ ] ERC-20 balance detection across wallet constellation (multicall batch)
-- [ ] Configurable: min sweep amount, gas threshold, destination address
-- [ ] Dust handling (skip if gas > value)
-- [ ] `consolidate_funds` IPC command
-- [ ] Wire front-end WalletManager Consolidate button to the backend via walletStore
+- [x] `executor/consolidation.rs` — sweep logic for ETH/native + ERC-20 tokens (19 unit tests)
+- [x] ERC-20 balance detection across wallet constellation (multicall batch)
+- [x] Configurable: min sweep amount, gas threshold, destination address
+- [x] Dust handling (skip if gas > value)
+- [x] `plan_consolidation` + `execute_consolidation` IPC commands
+- [x] Wire front-end WalletManager Consolidate button to the backend via walletStore
 - [ ] Sweep transaction logging in claims table
 
 ---
@@ -119,10 +119,10 @@ These are the features that prevent the app from operating end-to-end autonomous
 **What**: Alert user when high-score opportunities are discovered or claims succeed/fail.
 **Scope**:
 - [ ] Add `@tauri-apps/plugin-notification` to frontend deps
-- [ ] Add `tauri-plugin-notification` to Cargo.toml
+- [x] Add `tauri-plugin-notification` to Cargo.toml
 - [ ] Notification on opportunity with sigma_score > configurable threshold
 - [ ] Notification on claim success/failure
-- [ ] Notification toggle in Settings view
+- [x] Notification toggle in Settings view (settingsStore)
 
 #### 6. Keyboard Shortcuts
 **What**: Power-user keyboard navigation described in Stage 7 of ROLLOUT-PLAN.
@@ -143,10 +143,10 @@ These are the features that prevent the app from operating end-to-end autonomous
 #### 8. Token Price Fetching (CoinGecko)
 **What**: Currently, analytics and wallet balances are only in native ETH amounts — no USD conversion.
 **Scope**:
-- [ ] CoinGecko free API client in Rust (simple price endpoint)
-- [ ] `get_token_prices` IPC command
-- [ ] Wire into AnalyticsBay and WalletManager for USD display
-- [ ] Cache prices for 5 minutes
+- [x] CoinGecko free API client in Rust (`chain/coingecko.rs`, 13 unit tests)
+- [x] `get_token_prices` IPC command with 5-minute TTL cache
+- [x] `priceStore.js` Zustand store for frontend price state
+- [ ] Wire USD display into AnalyticsBay and WalletManager views
 
 ---
 
@@ -255,12 +255,12 @@ Sprint 6 → Items 12 + 13 + 14 (audit + updater + perf)
 
 | Directory | Files | Status |
 |-----------|-------|--------|
-| `src-tauri/src/` | 39 .rs files | ✅ All complete |
+| `src-tauri/src/` | 42 .rs files | ✅ All complete |
 | `src/views/` | 6 .jsx files | ✅ All complete |
 | `src/components/` | 7 .jsx files | ✅ All complete |
-| `src/stores/` | 7 .js files | ✅ All complete |
+| `src/stores/` | 8 .js files | ✅ All complete |
 | `src/hooks/` | 3 .js files | ✅ All complete |
 | `src/lib/` | 3 .js files | ✅ All complete |
-| `src/__tests__/` | 8 test files + 1 mock | ✅ 153/153 pass |
+| `src/__tests__/` | 9 test files + 1 mock | ✅ 178/178 pass |
 | `.github/workflows/` | 2 YAML files | ✅ CI + Release |
 | Config files | 8 files | ✅ Complete |

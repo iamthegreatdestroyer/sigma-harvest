@@ -1109,3 +1109,66 @@ pub async fn simulate_claim(
         .await
         .map_err(|e| e.to_string())
 }
+
+// ═══════════════════════════════════════════════════════════
+// ── Consolidation IPC Commands ────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Plan a token consolidation sweep (dry run — no transactions sent).
+/// Scans all wallets for native + ERC-20 balances and determines which are worth sweeping.
+#[tauri::command]
+pub async fn plan_consolidation(
+    destination: String,
+    chain: String,
+    min_native_wei: u128,
+    min_erc20_units: u128,
+    max_gas_gwei: f64,
+    erc20_tokens: Vec<String>,
+    gas_price_gwei: f64,
+    vault: State<'_, VaultState>,
+    client: State<'_, ChainClientState>,
+) -> Result<crate::executor::consolidation::ConsolidationPlan, String> {
+    // Extract wallet addresses synchronously before any await
+    let wallet_addresses = {
+        let keystore = vault.0.lock().map_err(|e| e.to_string())?;
+        if keystore.is_locked() {
+            return Err("Vault is locked".to_string());
+        }
+        keystore.wallets().iter().map(|w| w.address.clone()).collect::<Vec<String>>()
+    };
+
+    let config = crate::executor::consolidation::ConsolidationConfig {
+        destination,
+        chain,
+        min_native_wei,
+        min_erc20_units,
+        max_gas_gwei,
+        erc20_tokens,
+    };
+
+    crate::executor::consolidation::plan_consolidation(&config, &wallet_addresses, &client.0, gas_price_gwei)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── Price IPC Commands ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
+/// Get token prices for all supported native gas tokens (ETH, MATIC).
+/// Results are cached for 5 minutes.
+#[tauri::command]
+pub async fn get_token_prices(
+    price_client: State<'_, crate::PriceClientState>,
+) -> Result<crate::chain::coingecko::PriceResponse, String> {
+    price_client.0.get_native_prices().await.map_err(|e| e.to_string())
+}
+
+/// Get the USD price for a specific chain's native token.
+#[tauri::command]
+pub async fn get_chain_price_usd(
+    chain: String,
+    price_client: State<'_, crate::PriceClientState>,
+) -> Result<f64, String> {
+    price_client.0.get_chain_price(&chain).await.map_err(|e| e.to_string())
+}

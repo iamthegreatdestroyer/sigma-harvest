@@ -38,6 +38,9 @@ describe("useWalletStore", () => {
       mnemonic: null,
       loading: false,
       error: null,
+      consolidationPlan: null,
+      consolidationLoading: false,
+      consolidationError: null,
     });
   });
 
@@ -222,5 +225,95 @@ describe("useWalletStore", () => {
     useWalletStore.setState({ error: "some error" });
     useWalletStore.getState().clearError();
     expect(useWalletStore.getState().error).toBeNull();
+  });
+
+  // ── Consolidation ──────────────────────────────────────
+
+  it("has correct initial consolidation state", () => {
+    const state = useWalletStore.getState();
+    expect(state.consolidationPlan).toBeNull();
+    expect(state.consolidationLoading).toBe(false);
+    expect(state.consolidationError).toBeNull();
+  });
+
+  it("planConsolidation success stores plan", async () => {
+    const mockPlan = {
+      chain: "ethereum",
+      destination: "0x1234567890abcdef1234567890abcdef12345678",
+      candidates: [{ wallet_address: "0xAAA", native_balance_wei: 1000000, native_sweepable: true }],
+      total_native_wei: 900000,
+      total_erc20_sweeps: 0,
+      total_gas_cost_wei: 100000,
+      skipped_dust: 2,
+    };
+    __mockResponse("plan_consolidation", mockPlan);
+
+    const plan = await useWalletStore.getState().planConsolidation({
+      destination: "0x1234567890abcdef1234567890abcdef12345678",
+    });
+
+    const state = useWalletStore.getState();
+    expect(state.consolidationPlan).toEqual(mockPlan);
+    expect(state.consolidationLoading).toBe(false);
+    expect(state.consolidationError).toBeNull();
+    expect(plan.chain).toBe("ethereum");
+  });
+
+  it("planConsolidation failure sets error", async () => {
+    __mockResponse("plan_consolidation", new Error("Vault is locked"));
+
+    await expect(
+      useWalletStore.getState().planConsolidation({
+        destination: "0x1234567890abcdef1234567890abcdef12345678",
+      })
+    ).rejects.toThrow();
+
+    const state = useWalletStore.getState();
+    expect(state.consolidationError).toContain("locked");
+    expect(state.consolidationLoading).toBe(false);
+    expect(state.consolidationPlan).toBeNull();
+  });
+
+  it("planConsolidation sets loading during operation", async () => {
+    let captured = null;
+    __mockResponse("plan_consolidation", () => {
+      captured = useWalletStore.getState().consolidationLoading;
+      return { chain: "ethereum", candidates: [], skipped_dust: 0 };
+    });
+
+    await useWalletStore.getState().planConsolidation({
+      destination: "0x1234567890abcdef1234567890abcdef12345678",
+    });
+    expect(captured).toBe(true);
+    expect(useWalletStore.getState().consolidationLoading).toBe(false);
+  });
+
+  it("clearConsolidation resets consolidation state", () => {
+    useWalletStore.setState({
+      consolidationPlan: { chain: "ethereum", candidates: [] },
+      consolidationError: "some error",
+    });
+    useWalletStore.getState().clearConsolidation();
+    const state = useWalletStore.getState();
+    expect(state.consolidationPlan).toBeNull();
+    expect(state.consolidationError).toBeNull();
+  });
+
+  it("planConsolidation passes correct params to invoke", async () => {
+    __mockResponse("plan_consolidation", { chain: "ethereum", candidates: [] });
+
+    await useWalletStore.getState().planConsolidation({
+      destination: "0xDEST",
+      chain: "arbitrum",
+      maxGasGwei: 5,
+      gasPriceGwei: 2,
+    });
+
+    expect(invoke).toHaveBeenCalledWith("plan_consolidation", expect.objectContaining({
+      destination: "0xDEST",
+      chain: "arbitrum",
+      maxGasGwei: 5,
+      gasPriceGwei: 2,
+    }));
   });
 });

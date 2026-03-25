@@ -1,3 +1,4 @@
+pub mod consolidation;
 pub mod gas_oracle;
 pub mod queue;
 pub mod simulation;

@@ -9,6 +9,10 @@ export const useWalletStore = create((set, get) => ({
   mnemonic: null, // Shown only once during creation
   loading: false,
   error: null,
+  // Consolidation state
+  consolidationPlan: null,
+  consolidationLoading: false,
+  consolidationError: null,
 
   /** Fetch vault status from backend on app start. */
   fetchVaultStatus: async () => {
@@ -89,4 +93,37 @@ export const useWalletStore = create((set, get) => ({
   clearMnemonic: () => set({ mnemonic: null }),
   setSelectedWallet: (wallet) => set({ selectedWallet: wallet }),
   clearError: () => set({ error: null }),
+
+  /** Plan a token consolidation sweep (dry run). */
+  planConsolidation: async ({
+    destination,
+    chain = "ethereum",
+    minNativeWei = 1000000000000000, // 0.001 ETH
+    minErc20Units = 0,
+    maxGasGwei = 30,
+    erc20Tokens = [],
+    gasPriceGwei = 10,
+  } = {}) => {
+    set({ consolidationLoading: true, consolidationError: null, consolidationPlan: null });
+    try {
+      const plan = await invoke("plan_consolidation", {
+        destination,
+        chain,
+        minNativeWei,
+        minErc20Units,
+        maxGasGwei,
+        erc20Tokens,
+        gasPriceGwei,
+      });
+      set({ consolidationPlan: plan, consolidationLoading: false });
+      return plan;
+    } catch (err) {
+      set({ consolidationError: String(err), consolidationLoading: false });
+      throw err;
+    }
+  },
+
+  /** Clear consolidation plan state. */
+  clearConsolidation: () =>
+    set({ consolidationPlan: null, consolidationError: null }),
 }));

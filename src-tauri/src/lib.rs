@@ -23,6 +23,9 @@ fn load_env_files() {
 /// Shared state wrapper for the chain RPC client.
 pub struct ChainClientState(pub chain::ChainClient);
 
+/// Shared state wrapper for the CoinGecko price client.
+pub struct PriceClientState(pub chain::PriceClient);
+
 /// Shared state for the ΣCORE nervous system.
 pub struct SigmaCoreState {
     pub memory: Mutex<core::sigma::memory::AssociativeMemory>,
@@ -70,6 +73,10 @@ pub fn run() {
 
             // Register chain client state (4 concurrent RPC calls max for free tiers)
             app.manage(ChainClientState(chain::ChainClient::new(4)));
+
+            // Register CoinGecko price client
+            let coingecko_key = std::env::var("COINGECKO_API_KEY").ok();
+            app.manage(PriceClientState(chain::PriceClient::new(coingecko_key)));
 
             // Initialize ΣCORE nervous system
             app.manage(SigmaCoreState {
@@ -134,6 +141,11 @@ pub fn run() {
             ipc::commands::get_all_config,
             // Simulation
             ipc::commands::simulate_claim,
+            // Consolidation
+            ipc::commands::plan_consolidation,
+            // Prices
+            ipc::commands::get_token_prices,
+            ipc::commands::get_chain_price_usd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ΣHARVEST");
