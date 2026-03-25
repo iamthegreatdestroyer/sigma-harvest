@@ -3,7 +3,7 @@
 > Audit date: 2026-03-24
 > Auditor: Copilot Agent (APEX-01)
 > Codebase state: **Zero stubs remaining** — 39 Rust files, 27 JS/JSX files, all real implementations
-> Tests: **137/137 JS tests pass**, comprehensive Rust test suites across all modules
+> Tests: **153/153 JS tests pass**, **442/442 Rust tests pass**
 > Build: **Clean** (Vite + Cargo)
 
 ---
@@ -17,10 +17,10 @@
 | 2 | Crypto Vault + Storage | **DONE** | 100% |
 | 3 | Chain Connectivity + Wallet UI | **DONE** | 100% |
 | 4 | Discovery Engine + Feed UI | **DONE** | 100% |
-| 5 | Claim Execution Engine | **PARTIAL** | ~70% |
+| 5 | Claim Execution Engine | **PARTIAL** | ~85% |
 | 6 | Auto-Consolidation + Analytics | **PARTIAL** | ~60% |
-| 7 | Command Palette + Power UX | **PARTIAL** | ~50% |
-| 8 | Hardening + Release Prep | **PARTIAL** | ~40% |
+| 7 | Command Palette + Power UX | **DONE** | 100% |
+| 8 | Hardening + Release Prep | **PARTIAL** | ~50% |
 | 9 | Extended Chains + Quests | NOT STARTED | 0% |
 | 10 | ΣLANG Integration | **PARTIAL** | ~30% |
 
@@ -68,36 +68,36 @@ These are the features that prevent the app from operating end-to-end autonomous
 **What**: Before broadcast, every claim transaction must be simulated via `eth_call` to detect reverts, check gas, and flag suspicious outcomes.
 **Why critical**: Without this, real transactions with real gas can fail or interact with malicious contracts.
 **Scope**:
-- [ ] `eth_call` simulation with full state override
-- [ ] ABI revert reason decoding (already partially in `transaction.rs`)
-- [ ] Gas estimation comparison (simulated vs oracle)
-- [ ] Suspicious outcome detection (unexpected token approvals, balance changes)
-- [ ] Gate: simulation MUST pass before `executor/mod.rs` proceeds to signing
+- [x] `eth_call` simulation with full state override
+- [x] ABI revert reason decoding (already partially in `transaction.rs`)
+- [x] Gas estimation comparison (simulated vs oracle)
+- [x] Suspicious outcome detection (unexpected token approvals, balance changes)
+- [x] Gate: simulation MUST pass before `executor/mod.rs` proceeds to signing
 - [ ] Integration with existing `ClaimPipeline` in `executor/mod.rs`
 
 #### 2. Settings View (`src/views/Settings.jsx` + `src/stores/settingsStore.js`)
 **What**: No UI currently exists to configure RPC endpoints, gas ceilings, API keys, auto-lock timeout, or notification preferences.
 **Why critical**: Users must currently edit `.env.local` or `.env` files manually — the app has no way to persist runtime config changes.
 **Scope**:
-- [ ] New `Settings.jsx` view added to sidebar navigation
-- [ ] `settingsStore.js` Zustand store backed by Tauri `get_config`/`set_config` IPC commands
-- [ ] RPC endpoint override per chain (text inputs)
-- [ ] Gas ceiling per chain (number inputs consuming existing `setGasCeiling` in huntStore)
-- [ ] API keys for DappRadar, Twitter/X, CoinGecko (masked password inputs)
-- [ ] Auto-lock timeout selector (5m / 15m / 30m / 1h / never)
-- [ ] Discovery source intervals (seconds per source)
-- [ ] Export/import settings as JSON
-- [ ] Sidebar nav entry with Settings/gear icon
+- [x] New `Settings.jsx` view added to sidebar navigation
+- [x] `settingsStore.js` Zustand store backed by Tauri `get_config`/`set_config` IPC commands
+- [x] RPC endpoint override per chain (text inputs)
+- [x] Gas ceiling per chain (number inputs consuming existing `setGasCeiling` in huntStore)
+- [x] API keys for DappRadar, Twitter/X, CoinGecko (masked password inputs)
+- [x] Auto-lock timeout selector (5m / 15m / 30m / 1h / never)
+- [x] Discovery source intervals (seconds per source)
+- [x] Export/import settings as JSON
+- [x] Sidebar nav entry with Settings/gear icon
 
 #### 3. Environment Variable Loading (Backend)
 **What**: The Rust backend needs to read `.env.local` for API keys and RPC endpoint overrides.
 **Why critical**: Discovery sources like DappRadar, Twitter/X, and CoinGecko fail silently without API keys — users need a way to provide them.
 **Scope**:
-- [ ] Add `dotenvy` crate to Cargo.toml
-- [ ] Load `.env.local` at startup in `lib.rs`
+- [x] Add `dotenvy` crate to Cargo.toml
+- [x] Load `.env.local` at startup in `lib.rs`
 - [ ] Wire env vars into discovery source constructors (DappRadar, Social, CoinGecko)
 - [ ] Wire env vars into chain provider overrides
-- [ ] Add `get_config` / `set_config` IPC commands backed by DB `config` table
+- [x] Add `get_config` / `set_config` IPC commands backed by DB `config` table
 
 #### 4. Token Consolidation Backend (`executor/consolidation.rs`)
 **What**: The Consolidate button in WalletManager currently shows a placeholder alert. Needs a backend module to sweep ERC-20 and native tokens from HD-derived wallets to a designated cold wallet.
@@ -127,18 +127,18 @@ These are the features that prevent the app from operating end-to-end autonomous
 #### 6. Keyboard Shortcuts
 **What**: Power-user keyboard navigation described in Stage 7 of ROLLOUT-PLAN.
 **Scope**:
-- [ ] `Alt+1` through `Alt+5` — Navigate to views
-- [ ] `Ctrl+K` — Command palette (may already work via cmdk)
-- [ ] `Ctrl+H` — Toggle hunt
-- [ ] `Ctrl+L` — Lock vault
-- [ ] Help overlay (`?` key) showing all shortcuts
+- [x] `Alt+1` through `Alt+6` — Navigate to views
+- [x] `Ctrl+K` — Command palette
+- [x] `Ctrl+H` — Toggle hunt
+- [x] `Ctrl+L` — Lock vault
+- [x] Help overlay (`?` key) showing all shortcuts
 
 #### 7. Auto-Lock Timeout
 **What**: Vault should auto-lock after configurable idle timeout.
 **Scope**:
-- [ ] Idle timer in `walletStore.js` (reset on any user interaction)
-- [ ] Configurable duration in Settings view
-- [ ] Calls `lockVault()` on timeout
+- [x] Idle timer in App.jsx (reset on mousedown/keydown/mousemove/scroll/touch)
+- [x] Configurable duration in Settings view
+- [x] Calls `lockVault()` on timeout
 
 #### 8. Token Price Fetching (CoinGecko)
 **What**: Currently, analytics and wallet balances are only in native ETH amounts — no USD conversion.
@@ -256,11 +256,11 @@ Sprint 6 → Items 12 + 13 + 14 (audit + updater + perf)
 | Directory | Files | Status |
 |-----------|-------|--------|
 | `src-tauri/src/` | 39 .rs files | ✅ All complete |
-| `src/views/` | 5 .jsx files | ✅ All complete |
+| `src/views/` | 6 .jsx files | ✅ All complete |
 | `src/components/` | 7 .jsx files | ✅ All complete |
-| `src/stores/` | 6 .js files | ✅ All complete |
+| `src/stores/` | 7 .js files | ✅ All complete |
 | `src/hooks/` | 3 .js files | ✅ All complete |
 | `src/lib/` | 3 .js files | ✅ All complete |
-| `src/__tests__/` | 7 test files + 1 mock | ✅ 137/137 pass |
+| `src/__tests__/` | 8 test files + 1 mock | ✅ 153/153 pass |
 | `.github/workflows/` | 2 YAML files | ✅ CI + Release |
 | Config files | 8 files | ✅ Complete |

@@ -5,19 +5,23 @@ import {
   Wallet,
   Search,
   BarChart3,
-  Settings,
+  Settings as SettingsIcon,
   Lock,
   Unlock,
   Activity,
+  HelpCircle,
 } from "lucide-react";
 import Dashboard from "./views/Dashboard";
 import HuntConsole from "./views/HuntConsole";
 import WalletManager from "./views/WalletManager";
 import OpportunityInspector from "./views/OpportunityInspector";
 import AnalyticsBay from "./views/AnalyticsBay";
+import SettingsView from "./views/Settings";
 import CommandPalette from "./components/CommandPalette";
 import { useAppStore } from "./stores/appStore";
 import { useWalletStore } from "./stores/walletStore";
+import { useSettingsStore } from "./stores/settingsStore";
+import { useHuntStore } from "./stores/huntStore";
 
 const NAV_ITEMS = [
   {
@@ -40,6 +44,12 @@ const NAV_ITEMS = [
     icon: BarChart3,
     shortcut: "Alt+5",
   },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: SettingsIcon,
+    shortcut: "Alt+6",
+  },
 ];
 
 const VIEW_MAP = {
@@ -48,6 +58,7 @@ const VIEW_MAP = {
   wallets: WalletManager,
   inspect: OpportunityInspector,
   analytics: AnalyticsBay,
+  settings: SettingsView,
 };
 
 export default function App() {
@@ -57,13 +68,35 @@ export default function App() {
     commandPaletteOpen,
     setCommandPaletteOpen,
   } = useAppStore();
-  const { vaultLocked, fetchVaultStatus } = useWalletStore();
+  const { vaultLocked, fetchVaultStatus, lockVault } = useWalletStore();
+  const { autoLockMinutes, loadSettings: loadSettingsFromStore } = useSettingsStore();
+  const { running: huntRunning, setRunning: setHuntRunning } = useHuntStore();
 
   useEffect(() => {
     fetchVaultStatus();
-  }, [fetchVaultStatus]);
+    loadSettingsFromStore();
+  }, [fetchVaultStatus, loadSettingsFromStore]);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [helpOpen, setHelpOpen] = useState(false);
 
+  // ── Auto-Lock Timer ─────────────────────────────────────────
+  useEffect(() => {
+    if (vaultLocked || autoLockMinutes <= 0) return;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => lockVault(), autoLockMinutes * 60_000);
+    };
+    const events = ["mousedown", "keydown", "mousemove", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [vaultLocked, autoLockMinutes, lockVault]);
+
+  // ── Keyboard Shortcuts ──────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ctrl+K → Command palette
@@ -71,15 +104,31 @@ export default function App() {
         e.preventDefault();
         setCommandPaletteOpen(!commandPaletteOpen);
       }
-      // Alt+1-5 → Navigate views
-      if (e.altKey && e.key >= "1" && e.key <= "5") {
+      // Alt+1-6 → Navigate views
+      if (e.altKey && e.key >= "1" && e.key <= "6") {
         e.preventDefault();
-        setActiveView(NAV_ITEMS[parseInt(e.key) - 1].id);
+        const idx = parseInt(e.key) - 1;
+        if (NAV_ITEMS[idx]) setActiveView(NAV_ITEMS[idx].id);
+      }
+      // Ctrl+H → Toggle hunt
+      if (e.ctrlKey && e.key === "h") {
+        e.preventDefault();
+        setHuntRunning(!huntRunning);
+      }
+      // Ctrl+L → Lock vault
+      if (e.ctrlKey && e.key === "l") {
+        e.preventDefault();
+        lockVault();
+      }
+      // ? → Help overlay (only if no input focused)
+      if (e.key === "?" && !["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName)) {
+        e.preventDefault();
+        setHelpOpen((prev) => !prev);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [commandPaletteOpen, setActiveView, setCommandPaletteOpen]);
+  }, [commandPaletteOpen, setActiveView, setCommandPaletteOpen, huntRunning, setHuntRunning, lockVault]);
 
   const ActiveView = VIEW_MAP[activeView] || Dashboard;
 
@@ -180,6 +229,40 @@ export default function App() {
 
       {/* Command Palette */}
       <CommandPalette />
+
+      {/* Help Overlay */}
+      {helpOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setHelpOpen(false)}>
+          <div className="bg-surface rounded-lg border border-border p-6 w-[420px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-primary flex items-center gap-2">
+                <HelpCircle size={16} />
+                Keyboard Shortcuts
+              </h3>
+              <button onClick={() => setHelpOpen(false)} className="text-text-muted hover:text-text text-xs">ESC</button>
+            </div>
+            <div className="space-y-2 text-xs">
+              {[
+                ["Ctrl+K", "Open command palette"],
+                ["Alt+1", "Command Center"],
+                ["Alt+2", "Hunt Console"],
+                ["Alt+3", "Wallet Manager"],
+                ["Alt+4", "Opportunity Inspector"],
+                ["Alt+5", "Analytics Bay"],
+                ["Alt+6", "Settings"],
+                ["Ctrl+H", "Toggle hunt"],
+                ["Ctrl+L", "Lock vault"],
+                ["?", "Toggle this help"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex justify-between py-1 border-b border-border/50">
+                  <kbd className="px-2 py-0.5 bg-surface-raised rounded text-primary font-mono">{key}</kbd>
+                  <span className="text-text-muted">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
