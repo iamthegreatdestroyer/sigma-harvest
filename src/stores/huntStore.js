@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { notifyHighScore, notifyClaim } from "../lib/notifications";
+import { useSettingsStore } from "./settingsStore";
+
+/** Read the DappRadar API key from settings, return null if empty. */
+function getDappRadarKey() {
+  const key = useSettingsStore.getState().apiKeys?.dappradar;
+  return key || null;
+}
 
 export const useHuntStore = create((set, get) => ({
   running: false,
@@ -46,7 +53,7 @@ export const useHuntStore = create((set, get) => ({
       const result = await invoke("discover_opportunities", {
         sources: enabledSources,
         rss_feeds: null,
-        dappradar_key: null,
+        dappradar_key: getDappRadarKey(),
       });
       set({ opportunities: result, loading: false });
       // Notify for high-score opportunities
@@ -87,7 +94,7 @@ export const useHuntStore = create((set, get) => ({
       const result = await invoke("run_hunt_cycle", {
         sources: enabledSources,
         rss_feeds: null,
-        dappradar_key: null,
+        dappradar_key: getDappRadarKey(),
       });
       set({ huntResult: result, evaluations: result.evaluations, loading: false, running: false });
       // Notify for high-score evaluated opportunities

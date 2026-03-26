@@ -122,6 +122,41 @@ pub fn load_all_config(conn: &Connection) -> Result<Vec<(String, String)>, DbErr
     Ok(pairs)
 }
 
+/// Log a consolidation sweep transaction into the claims table.
+///
+/// Uses a sentinel opportunity_id `"__consolidation__"` and status `"Consolidation"`
+/// to distinguish sweep records from regular claim records.
+pub fn log_consolidation_sweep(
+    conn: &Connection,
+    id: &str,
+    wallet_id: &str,
+    chain: &str,
+    tx_hash: Option<&str>,
+    gas_cost_wei: Option<&str>,
+    gas_cost_usd: Option<f64>,
+    value_received_usd: Option<f64>,
+) -> Result<(), DbError> {
+    // Ensure the sentinel opportunity row exists (FK constraint).
+    conn.execute(
+        "INSERT OR IGNORE INTO opportunities (id, source, chain, opportunity_type, title, status)
+         VALUES ('__consolidation__', 'system', 'all', 'Consolidation', 'Token Consolidation Sweep', 'System')",
+        [],
+    )?;
+    conn.execute(
+        "INSERT INTO claims (id, opportunity_id, wallet_id, chain, tx_hash, gas_cost_wei, gas_cost_usd, value_received_usd, status, completed_at)
+         VALUES (?1, '__consolidation__', ?2, ?3, ?4, ?5, ?6, ?7, 'Consolidation', datetime('now'))",
+        rusqlite::params![id, wallet_id, chain, tx_hash, gas_cost_wei, gas_cost_usd, value_received_usd],
+    )?;
+    Ok(())
+}
+
+/// Count consolidation sweep records.
+pub fn count_consolidation_sweeps(conn: &Connection) -> Result<u64, DbError> {
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM claims WHERE status = 'Consolidation'")?;
+    let count: u64 = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
 /// A wallet record from the database.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct WalletRecord {
@@ -452,5 +487,80 @@ mod tests {
     fn db_state_is_send_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<DbState>();
+    }
+
+    // ── Consolidation sweep logging ───────────────────────────════
+
+    #[test]
+    fn log_consolidation_sweep_basic() {
+        let conn = test_db();
+        save_wallet(&conn, "w1", "p1", "0xAAA", "ethereum", None).unwrap();
+        log_consolidation_sweep(
+            &conn,
+            "sweep-1",
+            "w1",
+            "ethereum",
+            Some("0xabc123"),
+            Some("21000000000000"),
+            Some(0.05),
+            Some(12.50),
+        )
+        .unwrap();
+        let status: String = conn
+            .query_row("SELECT status FROM claims WHERE id = 'sweep-1'", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(status, "Consolidation");
+    }
+
+    #[test]
+    fn log_consolidation_sweep_sentinel_opportunity_id() {
+        let conn = test_db();
+        save_wallet(&conn, "w1", "p1", "0xAAA", "ethereum", None).unwrap();
+        log_consolidation_sweep(&conn, "sweep-2", "w1", "ethereum", None, None, None, None).unwrap();
+        let opp_id: String = conn
+            .query_row("SELECT opportunity_id FROM claims WHERE id = 'sweep-2'", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(opp_id, "__consolidation__");
+    }
+
+    #[test]
+    fn log_consolidation_sweep_optional_fields() {
+        let conn = test_db();
+        save_wallet(&conn, "w1", "p1", "0xBBB", "arbitrum", None).unwrap();
+        log_consolidation_sweep(&conn, "sweep-3", "w1", "arbitrum", None, None, None, None).unwrap();
+        let count = count_consolidation_sweeps(&conn).unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn count_consolidation_sweeps_empty() {
+        let conn = test_db();
+        assert_eq!(count_consolidation_sweeps(&conn).unwrap(), 0);
+    }
+
+    #[test]
+    fn count_consolidation_sweeps_multiple() {
+        let conn = test_db();
+        save_wallet(&conn, "w1", "p1", "0xAAA", "ethereum", None).unwrap();
+        log_consolidation_sweep(&conn, "s1", "w1", "ethereum", None, None, None, None).unwrap();
+        log_consolidation_sweep(&conn, "s2", "w1", "ethereum", None, None, Some(0.1), Some(5.0)).unwrap();
+        log_consolidation_sweep(&conn, "s3", "w1", "ethereum", Some("0xdef"), None, Some(0.2), Some(10.0)).unwrap();
+        assert_eq!(count_consolidation_sweeps(&conn).unwrap(), 3);
+    }
+
+    #[test]
+    fn consolidation_sweep_preserves_usd_values() {
+        let conn = test_db();
+        save_wallet(&conn, "w1", "p1", "0xAAA", "ethereum", None).unwrap();
+        log_consolidation_sweep(&conn, "s1", "w1", "ethereum", None, None, Some(1.23), Some(45.67)).unwrap();
+        let (gas, value): (f64, f64) = conn
+            .query_row(
+                "SELECT gas_cost_usd, value_received_usd FROM claims WHERE id = 's1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert!((gas - 1.23).abs() < 0.001);
+        assert!((value - 45.67).abs() < 0.001);
     }
 }

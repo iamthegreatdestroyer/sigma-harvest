@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useWalletStore } from "../stores/walletStore";
 import { useChainStore } from "../stores/chainStore";
+import { usePriceStore } from "../stores/priceStore";
 
 function MnemonicBackup({ mnemonic, onConfirm }) {
   const [confirmed, setConfirmed] = useState(false);
@@ -200,6 +201,7 @@ export default function WalletManager() {
   } = useWalletStore();
 
   const { balances, balanceLoading, fetchAllBalances } = useChainStore();
+  const { fetchPrices, toUsd } = usePriceStore();
 
   const [deriveChain, setDeriveChain] = useState("ethereum");
   const [chainDropdownOpen, setChainDropdownOpen] = useState(false);
@@ -215,8 +217,9 @@ export default function WalletManager() {
     if (!vaultLocked && wallets.length > 0) {
       const addresses = wallets.map((w) => w.address);
       fetchAllBalances(addresses);
+      fetchPrices();
     }
-  }, [vaultLocked, wallets, fetchAllBalances]);
+  }, [vaultLocked, wallets, fetchAllBalances, fetchPrices]);
 
   const handleRefreshBalances = () => {
     if (wallets.length > 0) {
@@ -425,6 +428,7 @@ export default function WalletManager() {
               key={w.address}
               wallet={w}
               balances={balances[w.address] || []}
+              toUsd={toUsd}
             />
           ))
         )}
@@ -433,7 +437,7 @@ export default function WalletManager() {
   );
 }
 
-function WalletCard({ wallet, balances }) {
+function WalletCard({ wallet, balances, toUsd }) {
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -445,6 +449,7 @@ function WalletCard({ wallet, balances }) {
   };
 
   const totalBalance = balances.reduce((sum, b) => sum + b.balance_eth, 0);
+  const totalUsd = balances.reduce((sum, b) => sum + (toUsd?.(b.chain, b.balance_eth) ?? 0), 0);
 
   return (
     <div className="bg-surface rounded-lg border border-border hover:border-primary/30 transition-colors">
@@ -475,6 +480,11 @@ function WalletCard({ wallet, balances }) {
           <div className="text-sm font-bold text-primary">
             {totalBalance > 0 ? totalBalance.toFixed(6) : "—"} ETH
           </div>
+          {totalUsd > 0 && (
+            <div className="text-[11px] text-accent">
+              ${totalUsd.toFixed(2)}
+            </div>
+          )}
           <div className="text-xs text-text-muted">
             {wallet.label || `Wallet #${wallet.index}`}
           </div>
@@ -497,6 +507,11 @@ function WalletCard({ wallet, balances }) {
                   ? b.balance_eth.toFixed(6)
                   : "0.000000"}{" "}
                 {b.chain === "polygon" ? "MATIC" : "ETH"}
+                {b.balance_eth > 0 && toUsd && (
+                  <span className="ml-2 text-accent">
+                    (${toUsd(b.chain, b.balance_eth).toFixed(2)})
+                  </span>
+                )}
               </span>
             </div>
           ))}

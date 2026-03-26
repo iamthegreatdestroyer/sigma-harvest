@@ -143,6 +143,7 @@ pub fn run() {
             ipc::commands::simulate_claim,
             // Consolidation
             ipc::commands::plan_consolidation,
+            ipc::commands::record_consolidation_sweep,
             // Prices
             ipc::commands::get_token_prices,
             ipc::commands::get_chain_price_usd,

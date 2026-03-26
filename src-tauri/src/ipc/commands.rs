@@ -639,8 +639,11 @@ pub async fn discover_opportunities(
                 source.discover().await
             }
             "dappradar" => {
+                let key = dappradar_key
+                    .clone()
+                    .or_else(|| std::env::var("DAPPRADAR_API_KEY").ok());
                 let source = crate::discovery::dappradar::DappRadarSource {
-                    api_key: dappradar_key.clone(),
+                    api_key: key,
                 };
                 source.discover().await
             }
@@ -649,8 +652,10 @@ pub async fn discover_opportunities(
                 source.discover().await
             }
             "onchain" => {
+                let rpc = std::env::var("ETHEREUM_RPC_URL")
+                    .unwrap_or_else(|_| "https://eth.llamarpc.com".to_string());
                 let source = crate::discovery::onchain::OnChainSource {
-                    rpc_url: "https://eth.llamarpc.com".to_string(),
+                    rpc_url: rpc,
                     chain: "ethereum".to_string(),
                     watchlist: vec![],
                     lookback_blocks: 100,
@@ -658,8 +663,9 @@ pub async fn discover_opportunities(
                 source.discover().await
             }
             "social" => {
+                let bearer = std::env::var("TWITTER_BEARER_TOKEN").ok();
                 let source = crate::discovery::social::SocialSource {
-                    bearer_token: None,
+                    bearer_token: bearer,
                 };
                 source.discover().await
             }
@@ -1149,6 +1155,33 @@ pub async fn plan_consolidation(
     crate::executor::consolidation::plan_consolidation(&config, &wallet_addresses, &client.0, gas_price_gwei)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Record a consolidation sweep transaction into the claims table.
+#[tauri::command]
+pub fn record_consolidation_sweep(
+    wallet_id: String,
+    chain: String,
+    tx_hash: Option<String>,
+    gas_cost_wei: Option<String>,
+    gas_cost_usd: Option<f64>,
+    value_received_usd: Option<f64>,
+    db: State<'_, DbState>,
+) -> Result<String, String> {
+    let conn = db.0.lock().map_err(|e| e.to_string())?;
+    let id = uuid::Uuid::new_v4().to_string();
+    crate::db::log_consolidation_sweep(
+        &conn,
+        &id,
+        &wallet_id,
+        &chain,
+        tx_hash.as_deref(),
+        gas_cost_wei.as_deref(),
+        gas_cost_usd,
+        value_received_usd,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(id)
 }
 
 // ═══════════════════════════════════════════════════════════
