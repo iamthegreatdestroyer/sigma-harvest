@@ -16,6 +16,18 @@ export function formatUsd(value) {
   return `$${Number(value).toFixed(2)}`;
 }
 
+/** Format USD value with comma separators (e.g. $1,234.56) */
+export function formatUsdLarge(value) {
+  if (value == null) return "$0.00";
+  const num = Number(value);
+  const abs = Math.abs(num);
+  const formatted = abs.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return num < 0 ? `$-${formatted}` : `$${formatted}`;
+}
+
 /** Format a gwei value */
 export function formatGwei(gwei) {
   if (gwei == null) return "—";

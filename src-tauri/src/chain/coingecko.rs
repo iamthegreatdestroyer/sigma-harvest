@@ -57,6 +57,16 @@ pub struct PriceClient {
 }
 
 impl PriceClient {
+    /// Create a new price client, reading `COINGECKO_API_KEY` from environment.
+    /// If the env var is absent, logs a warning and continues with free-tier rate limits.
+    pub fn from_env() -> Self {
+        let api_key = std::env::var("COINGECKO_API_KEY").ok();
+        if api_key.is_none() {
+            tracing::warn!("COINGECKO_API_KEY not set; CoinGecko requests will use free-tier rate limits");
+        }
+        Self::new(api_key)
+    }
+
     /// Create a new price client, optionally with a CoinGecko API key.
     pub fn new(api_key: Option<String>) -> Self {
         let http = Client::builder()

@@ -1,243 +1,315 @@
-# ΣHARVEST — Next Steps Master Action Plan
+# ΣHARVEST — Next Steps Master Action Plan v3
 
-> Created: 2026-03-25
-> Objective: Complete, fully functioning desktop application with state-of-the-art UI
-> Starting point: 681 tests passing (202 FE + 479 Rust), 42 Rust + 34 JS/JSX files
-> Target: v1.0.0 release-ready
+> **Updated:** 2026-03-31
+> **Objective:** Ship v1.0.0 — fully functioning, polished, audited desktop application
+> **Current state:** 699 tests passing (202 FE + 497 Rust), 42 Rust + 44 JS/JSX files
+> **Sprints completed:** 1-5 (delivered), Sprint 6 (90% — uncommitted)
+> **Target:** v1.0.0 release-ready
+> **Autonomy model:** Maximum automation — each sprint designed for uninterrupted agent execution
 
 ---
 
 ## Plan Overview
 
 ```
-Sprint 5  │ Close v1.0 Backend Gaps           │ Wire env vars, USD display, sweep logging
-Sprint 6  │ Headless Browser Module            │ Chrome DevTools Protocol for JS-heavy claims
-Sprint 7  │ State-of-the-Art UI Polish         │ Animations, toasts, skeletons, glassmorphism
-Sprint 8  │ E2E Testing + Security Audit       │ Integration tests, cargo/pnpm audit, zeroize
-Sprint 9  │ Auto-Updater + Performance         │ tauri-plugin-updater, startup profiling, soak test
-Sprint 10 │ Extended Chains + Phase 2          │ New EVM chains, quest automation templates
+COMPLETED ────────────────────────────────────────────────────────────
+Sprint 1  │ Transaction Simulation + Env Loading    │ DONE ✓  614979c
+Sprint 2  │ Settings View + Shortcuts + Auto-Lock   │ DONE ✓  4985b52
+Sprint 3  │ Consolidation Backend + Price Fetching   │ DONE ✓  5b826ee
+Sprint 4  │ Notifications + Sparkline Charts         │ DONE ✓  5fd4110
+Sprint 5  │ API Key Wiring + USD + Sweep Logging     │ DONE ✓  0749ae0
+
+IN PROGRESS ─────────────────────────────────────────────────────────
+Sprint 6  │ Commit + Final Backend Gaps              │ ~90% (code written, tests pass)
+
+REMAINING ────────────────────────────────────────────────────────────
+Sprint 7  │ Headless Browser Module                  │ 1-2 sessions
+Sprint 8  │ State-of-the-Art UI Polish               │ 1-2 sessions
+Sprint 9  │ E2E Testing + Security Audit             │ 1-2 sessions
+Sprint 10 │ Auto-Updater + Performance + Release     │ 1 session
+Sprint 11 │ Extended Chains + Phase 2                │ Post-v1.0
 ```
 
 ---
 
-## Sprint 5: Close Remaining v1.0 Gaps
+## Autonomy & Automation Principles
 
-**Goal:** Eliminate every remaining `[ ]` checkbox in REMAINING-WORK.md for Tiers 1-2.
-
-### 5A — Wire Env Vars into Discovery Sources
-**Files:** `discovery/dappradar.rs`, `discovery/social.rs`, `chain/provider.rs`
-**What:**
-- [ ] Read `DAPPRADAR_API_KEY` from env in DappRadar discovery constructor
-- [ ] Read `TWITTER_BEARER_TOKEN` from env in Social discovery constructor
-- [ ] Read `RPC_<CHAIN>_URL` env overrides into chain provider
-- [ ] Fallback gracefully when env vars are absent
-
-### 5B — USD Display in AnalyticsBay + WalletManager
-**Files:** `src/views/AnalyticsBay.jsx`, `src/views/WalletManager.jsx`
-**What:**
-- [ ] Import `usePriceStore` and fetch prices on mount
-- [ ] Display ETH balance × USD price alongside native amounts in WalletManager
-- [ ] Add USD column to chain breakdown table in AnalyticsBay
-- [ ] Format all monetary values with `$` prefix and 2 decimal places
-
-### 5C — Sweep Transaction Logging
-**Files:** `executor/consolidation.rs`, `db/mod.rs`
-**What:**
-- [ ] Log each sweep transaction into the `claims` table with status "Consolidation"
-- [ ] Record gas_cost_usd and value_received_usd for sweep operations
-- [ ] Add `consolidation_type` field handling in analytics queries
+1. **Zero human input required** for all remaining sprints (code, tests, commits)
+2. **Each sprint is self-contained** — read, implement, test, verify, commit
+3. **Dependency chain is strict** — no sprint starts until predecessor tests pass
+4. **Automated gates** — `cargo test`, `vitest run`, `cargo clippy` must all pass before commit
+5. **Parallel execution** — independent tasks within a sprint run concurrently via subagents
+6. **Rollback safety** — each sprint is a single commit; `git revert` undoes entire sprint
+7. **Incremental value** — every sprint produces a usable improvement, never leaves the app broken
 
 ---
 
-## Sprint 6: Headless Browser Module
+## Sprint 6: Commit Existing Work + Final Cleanup
 
-**Goal:** Support claiming on platforms that require JavaScript execution.
+**Goal:** Commit the 11 uncommitted files (simulation gate, env constructors, USD display, RPC overrides). Close any remaining gaps.
 
-### 6A — Chrome DevTools Protocol Integration
-**Files:** `executor/browser.rs` (new)
+**Autonomy:** [A] Fully autonomous — code is written, tests pass.
+
+### 6A — Verify & Commit Existing Work
+**Status:** Code complete, 699 tests passing.
+**Files (uncommitted):**
+- [x] `src-tauri/src/executor/mod.rs` — simulation gate in ClaimPipeline
+- [x] `src-tauri/src/executor/queue.rs` — queue updates
+- [x] `src-tauri/src/discovery/dappradar.rs` — `from_env()` constructor
+- [x] `src-tauri/src/discovery/social.rs` — `from_env()` constructor
+- [x] `src-tauri/src/chain/provider.rs` — RPC override from env vars
+- [x] `src-tauri/src/chain/coingecko.rs` — env var support
+- [x] `src-tauri/src/analytics/mod.rs` — USD in analytics
+- [x] `src/views/WalletManager.jsx` — portfolio USD total + per-wallet USD
+- [x] `src/views/AnalyticsBay.jsx` — chain breakdown USD table
+- [x] `src/lib/formatters.js` — `formatUsd`, `formatUsdLarge`
+- [x] `MASTER-ACTION-PLAN.md` — this document
+
+**Action:** Run tests → commit → update REMAINING-WORK.md checkboxes.
+
+**Sprint 6 Exit Criteria:** All 699+ tests pass, clean commit on main.
+
+---
+
+## Sprint 7: Headless Browser Module
+
+**Goal:** Enable autonomous claiming on platforms requiring JavaScript execution.
+
+**Autonomy:** [A] Fully autonomous.
+
+### 7A — BrowserSession Implementation
+**Files:** `src-tauri/src/executor/browser.rs` (new)
 **What:**
 - [ ] `BrowserSession` struct wrapping `headless_chrome::Browser`
-- [ ] `navigate_and_claim(url, wallet_provider)` method
-- [ ] Cookie/session management
-- [ ] MetaMask-like wallet provider injection via CDP
-- [ ] Screenshot on error → save to app data dir
-- [ ] CAPTCHA detection → flag claim for manual intervention
-- [ ] Configurable timeout (default 30s)
+- [ ] `navigate_and_claim(url, claim_config)` — page interaction via CDP
+- [ ] Cookie/session persistence between claims on same platform
+- [ ] MetaMask-like wallet provider injection (inject `window.ethereum` via CDP)
+- [ ] Screenshot on error → save to `{app_data_dir}/error-screenshots/`
+- [ ] CAPTCHA detection (heuristic: detect common CAPTCHA iframe patterns) → flag `ManualIntervention`
+- [ ] Configurable timeout (default 30s, max 120s)
+- [ ] 10+ unit tests with mock browser behavior
 
-### 6B — Claim Pipeline Integration
-**Files:** `executor/mod.rs`, `ipc/commands.rs`
+### 7B — BrowserClaim Pipeline Integration
+**Files:** `src-tauri/src/executor/mod.rs`, `src-tauri/src/ipc/commands.rs`
 **What:**
-- [ ] Add `BrowserClaim` variant to claim processing flow
+- [ ] Route opportunities with `requires_browser: true` through browser path
 - [ ] `execute_browser_claim` IPC command
-- [ ] Route JS-heavy opportunities through browser path
-- [ ] Tests with mock browser behavior
+- [ ] Opportunity scoring: `requires_browser` adds risk penalty (slower, less reliable)
+- [ ] Tests: mock browser claim → verify pipeline routing
+
+**Sprint 7 Exit Criteria:** Tests pass, browser module compiles, commit.
 
 ---
 
-## Sprint 7: State-of-the-Art UI Polish
+## Sprint 8: State-of-the-Art UI Polish
 
 **Goal:** Transform from functional to stunning. Cyberpunk terminal aesthetic with modern UX.
 
-### 7A — View Transitions + Micro-Animations (Framer Motion)
-**Files:** `App.jsx`, all views
-**What:**
-- [ ] `AnimatePresence` wrapper around `ActiveView` in App.jsx
-- [ ] Fade + slide transitions between views (150ms)
-- [ ] Stagger-in animations for stat cards and table rows
+**Autonomy:** [A] Fully autonomous.
+
+### 8A — View Transitions + Micro-Animations
+**Files:** `src/App.jsx`, all views
+- [ ] `AnimatePresence` wrapper around active view in App.jsx
+- [ ] Fade + slide transitions between views (150ms ease-out)
+- [ ] Stagger-in animations for stat cards (50ms delay per item)
 - [ ] Pulse animation on live data updates (HarvestFeed, GasTicker)
-- [ ] Scale-in animation for CommandPalette
+- [ ] Scale-in animation for CommandPalette dialog
 
-### 7B — In-App Toast Notification System
-**Files:** `components/Toast.jsx` (new), `lib/toast.js` (new), `stores/toastStore.js` (new)
-**What:**
-- [ ] Toast position: bottom-right, stacked
+### 8B — Toast Notification System
+**Files:** `src/components/Toast.jsx`, `src/lib/toast.js`, `src/stores/toastStore.js` (all new)
+- [ ] Toast container: bottom-right, stacked (max 5 visible)
 - [ ] Types: success (green), error (red), warning (amber), info (cyan)
-- [ ] Auto-dismiss after 5s with progress bar
+- [ ] Auto-dismiss after 5s with animated progress bar
 - [ ] Manual dismiss with X button
-- [ ] Animate in from right, slide down on stack
-- [ ] Wire into huntStore (claim results), walletStore (operations)
+- [ ] Framer Motion slide-in from right
+- [ ] Wire into: huntStore (claim results), walletStore (derivation, consolidation)
+- [ ] Tests: toastStore add/remove/auto-dismiss
 
-### 7C — Loading Skeletons
-**Files:** `components/Skeleton.jsx` (new)
-**What:**
-- [ ] Shimmer animation skeleton component
-- [ ] Apply to: Dashboard stat cards, WalletTree, AnalyticsBay charts
-- [ ] Replace bare `Loading...` text with skeletons everywhere
+### 8C — Loading Skeletons
+**Files:** `src/components/Skeleton.jsx` (new)
+- [ ] Shimmer animation skeleton component (configurable width/height/rounded)
+- [ ] Apply to: Dashboard stat cards, WalletTree rows, AnalyticsBay chart areas
+- [ ] Replace all bare `Loading...` text throughout app
 
-### 7D — Enhanced Dashboard
-**Files:** `views/Dashboard.jsx`, components
-**What:**
-- [ ] Animated counter for stat values (count-up on load)
-- [ ] Pulsing green dot with "LIVE" label on HarvestFeed
-- [ ] Mini progress ring showing overall claim success rate
-- [ ] Gradient border glow on hovering stat cards
+### 8D — Enhanced Dashboard Widgets
+**Files:** `src/views/Dashboard.jsx`
+- [ ] Animated counter (count-up from 0 on load using requestAnimationFrame)
+- [ ] Pulsing green dot + "LIVE" label on HarvestFeed header
+- [ ] Mini progress ring (SVG) showing overall claim success rate
+- [ ] Gradient border glow on stat card hover (CSS transition)
 
-### 7E — Custom Window Title Bar
-**Files:** `App.jsx`, `components/TitleBar.jsx` (new), `styles/globals.css`
-**What:**
-- [ ] Hide native title bar (Tauri decorations: false)
-- [ ] Custom title bar with: ΣHARVEST logo, minimize/maximize/close buttons
-- [ ] Draggable region for window movement
-- [ ] System tray integration for background operation
+### 8E — Custom Window Title Bar
+**Files:** `src/App.jsx`, `src/components/TitleBar.jsx` (new), `src-tauri/tauri.conf.json`
+- [ ] Set `"decorations": false` in tauri.conf.json
+- [ ] Custom title bar: ΣHARVEST logo + version, minimize/maximize/close buttons
+- [ ] `data-tauri-drag-region` for window dragging
+- [ ] Window control buttons using `@tauri-apps/api/window`
 
-### 7F — Enhanced AnalyticsBay Charts
-**Files:** `views/AnalyticsBay.jsx`
-**What:**
-- [ ] Time-series line chart (cumulative profit over time)
-- [ ] Interactive tooltips with formatted USD values
-- [ ] Chain breakdown as horizontal bar chart with logos
-- [ ] ROI percentage badge with trend arrow
+### 8F — Enhanced Charts + Glassmorphism
+**Files:** `src/views/AnalyticsBay.jsx`, `src/styles/globals.css`
+- [ ] Time-series line chart (cumulative profit over time) with interactive tooltips
+- [ ] Chain breakdown horizontal bar chart
+- [ ] ROI percentage badge with trend arrow (up green / down red)
+- [ ] Backdrop-blur on elevated surfaces (`backdrop-filter: blur(12px)`)
+- [ ] Subtle animated gradient mesh background
+- [ ] Neon glow on primary/accent interactive elements
+- [ ] Custom scrollbar styling matching theme
+- [ ] Focus ring and selection highlight in accent color
 
-### 7G — Glassmorphism + Visual Refinements
-**Files:** `styles/globals.css`, all views
-**What:**
-- [ ] Subtle backdrop-blur on surface-raised elements
-- [ ] Gradient mesh background on bg (animated, slow)
-- [ ] Neon glow effects on primary/accent elements
-- [ ] Refined scrollbar styling
-- [ ] Selection highlight color matching theme
-- [ ] Focus ring styling for accessibility
+**Sprint 8 Exit Criteria:** All tests pass, UI polished, 60fps animations, commit.
 
 ---
 
-## Sprint 8: E2E Testing + Security Audit
+## Sprint 9: E2E Testing + Security Audit
 
 **Goal:** Regression safety net + formal security review.
 
-### 8A — Rust Integration Tests
-**Files:** `tests/integration/` (new directory)
-**What:**
-- [ ] Full vault lifecycle test: create → derive → list → lock → unlock
-- [ ] Discovery pipeline test with mock HTTP responses
-- [ ] Claim execution pipeline test: create claim → simulate → process
-- [ ] Analytics query tests with seeded data
-- [ ] Property-based tests for crypto ops (`proptest` crate)
+**Autonomy:** [A] Fully autonomous.
 
-### 8B — Frontend E2E Tests
-**Files:** `tests/e2e/` (new directory)
-**What:**
-- [ ] Tauri WebDriver test: vault create flow
-- [ ] Hunt cycle simulation test
+### 9A — Rust Integration Tests
+**Files:** `src-tauri/tests/` (new directory)
+- [ ] Full vault lifecycle: create → derive → list → lock → unlock → re-derive
+- [ ] Discovery pipeline: mock HTTP → parse → evaluate → score
+- [ ] Claim pipeline: create → simulate → process → record in DB
+- [ ] Analytics queries: seed 100 records → verify aggregations
+- [ ] Property-based tests (proptest): BIP-39 seeds, AES encrypt/decrypt roundtrip
+
+### 9B — Frontend Component Tests
+**Files:** `src/__tests__/` (expand existing)
+- [ ] Dashboard render test with mocked store data
 - [ ] Settings save/load round-trip test
-- [ ] Navigation + keyboard shortcut tests
+- [ ] Toast lifecycle test (add → auto-dismiss → remove)
+- [ ] CommandPalette search + action test
+- [ ] Navigation keyboard shortcut tests
 
-### 8C — Security Audit
-**What:**
-- [ ] `cargo audit` — check all Rust deps for CVEs
-- [ ] `pnpm audit` — check all npm deps
-- [ ] Verify: no private key material crosses IPC boundary
-- [ ] Verify: all `zeroize` annotations on sensitive buffers
-- [ ] Verify: no outbound telemetry/phone-home
-- [ ] Verify: all user input validated at IPC boundary
-- [ ] Document findings in `SECURITY-AUDIT.md`
+### 9C — Security Audit
+- [ ] Run `cargo audit` — document all findings
+- [ ] Run `pnpm audit` — document all findings
+- [ ] Manual IPC boundary review: grep for private key patterns crossing IPC
+- [ ] Verify all `zeroize` annotations on `Seed`, `EncryptionKey`, `PrivateKey` types
+- [ ] Verify zero outbound telemetry/analytics/phone-home
+- [ ] Verify all user input validated at IPC boundary (string lengths, address formats)
+- [ ] Write `SECURITY-AUDIT.md` with findings and attestations
+
+**Sprint 9 Exit Criteria:** 900+ tests pass, 0 audit CVEs (or documented mitigations), commit.
 
 ---
 
-## Sprint 9: Auto-Updater + Performance
+## Sprint 10: Auto-Updater + Performance + Release
 
-**Goal:** Release-ready quality: auto-update, sub-2s startup, stable under load.
+**Goal:** Release-ready quality and v1.0.0 tag.
 
-### 9A — Auto-Updater
-**Files:** `src-tauri/Cargo.toml`, `tauri.conf.json`, `Settings.jsx`
-**What:**
-- [ ] Add `tauri-plugin-updater` to Cargo.toml
-- [ ] Configure update endpoint: GitHub Releases
+**Autonomy:** [A] Fully autonomous (except tag push authorization).
+
+### 10A — Auto-Updater
+- [ ] Add `tauri-plugin-updater` to Cargo.toml and capabilities
+- [ ] Configure update endpoint: GitHub Releases API
 - [ ] "Check for Updates" button in Settings view
-- [ ] Background update check on app launch (once per day)
-- [ ] Update notification in header bar
+- [ ] Background update check on app launch (once per 24h, stored in config table)
+- [ ] Update available toast notification
 
-### 9B — Performance Profiling
-**What:**
-- [ ] Startup time profiling (target: < 2s to first render)
-- [ ] 24h soak test under continuous discovery (memory leak check)
-- [ ] SQLite performance with 10K+ opportunity records
-- [ ] RPC call efficiency audit (batch where possible)
-- [ ] Frontend bundle code-splitting (dynamic imports for views)
+### 10B — Performance Optimization
+- [ ] Startup time profiling with `tracing` spans (target: <2s to first render)
+- [ ] Frontend code-splitting: dynamic `import()` for each view
+- [ ] SQLite query optimization: EXPLAIN ANALYZE on analytics queries
+- [ ] RPC call batching: consolidate multiple balance checks into multicall
+- [ ] Memory profiling: verify <200MB under sustained 24h operation
+
+### 10C — Release Prep
+- [ ] Update CHANGELOG.md with all sprint deliverables
+- [ ] Update README.md with current feature list and screenshots
+- [ ] Verify `pnpm tauri build` produces clean Windows installer
+- [ ] Create GitHub Release draft with release notes
+- [ ] Tag `v1.0.0`
+
+**Sprint 10 Exit Criteria:** 1000+ tests, clean build, sub-2s startup, v1.0.0 tag ready.
 
 ---
 
-## Sprint 10: Extended Chains + Phase 2
+## Sprint 11: Extended Chains + Phase 2 (Post v1.0)
 
-**Goal:** Expand beyond initial 6 chains, add quest automation.
+**Goal:** Expand beyond initial 6 chains.
 
-### 10A — New EVM Chains
-**Files:** `chain/registry.rs`, `src/lib/chains.js`
-**What:**
-- [ ] Avalanche C-Chain
-- [ ] BNB Smart Chain
-- [ ] Fantom / Sonic
-- [ ] Linea
-- [ ] Scroll
-- [ ] Blast
+### 11A — New EVM Chains
+- [ ] Avalanche C-Chain (43114)
+- [ ] BNB Smart Chain (56)
+- [ ] Fantom / Sonic (250)
+- [ ] Linea (59144)
+- [ ] Scroll (534352)
+- [ ] Blast (81457)
+- [ ] Update both `chain/registry.rs` and `src/lib/chains.js`
+- [ ] Verify discovery + claiming works per chain
 
-### 10B — Quest Automation Templates
-**Files:** `discovery/quests.rs` (new), `executor/quest_runner.rs` (new)
-**What:**
+### 11B — Quest Automation Templates
+- [ ] `discovery/quests.rs` — quest platform detection
+- [ ] `executor/quest_runner.rs` — multi-step quest execution
 - [ ] Galxe quest template engine
-- [ ] Zealy task automation
+- [ ] Zealy task automation (non-CAPTCHA tasks)
 - [ ] Layer3 quest support
-- [ ] Template-based claim flow (multi-step)
 
 ---
 
 ## Success Metrics for v1.0.0
 
-| Metric | Target |
-|--------|--------|
-| All tests pass | 800+ tests, 0 failures |
-| Build | Clean (Vite + Cargo, 0 warnings) |
-| Startup | < 2 seconds to first render |
-| Memory | < 200MB under sustained operation |
-| Security | 0 CVEs, 0 IPC key leaks |
-| UI | 60fps animations, no layout shift |
-| Coverage | 90%+ unit, all critical paths |
+| Metric | Current | Target | Gap |
+|--------|---------|--------|-----|
+| Tests passing | 699 | 1000+ | +301 |
+| Build warnings | 0 | 0 | MET |
+| Clippy warnings | 0 | 0 | MET |
+| Sprints complete | 5.9/10 | 10/10 | +4.1 |
+| Startup time | unmeasured | <2s | TBD |
+| Memory (sustained) | unmeasured | <200MB | TBD |
+| Security CVEs | unaudited | 0 | Sprint 9 |
+| UI animations | none | 60fps | Sprint 8 |
 
 ---
 
-## Execution Order
+## Execution Strategy for Maximum Autonomy
 
-**Immediate (this session):** Sprint 5A → 5B → 5C
-**Next session:** Sprint 6
-**Following sessions:** Sprint 7 → 8 → 9 → 10
+### Per-Sprint Workflow (Automated)
+```
+1. Read all target files
+2. Implement changes (parallel where independent)
+3. Run cargo test + vitest run + cargo clippy
+4. Fix any failures
+5. Commit with conventional commit message
+6. Update REMAINING-WORK.md checkboxes
+7. Report completion summary
+```
 
-Each sprint ends with: tests passing, commit, push.
+### Parallelization Map
+```
+Sprint 6:  Commit existing work (single atomic action)
+
+Sprint 7:  7A (browser impl) ──────┐
+           7B (pipeline route) ─────┘── 7B depends on 7A
+
+Sprint 8:  8A (animations) ───┐
+           8B (toasts) ───────┤
+           8C (skeletons) ────┤── All independent, run parallel
+           8D (dashboard) ────┤
+           8E (titlebar) ─────┤
+           8F (charts+glass) ─┘
+
+Sprint 9:  9A (rust tests) ───┐
+           9B (FE tests) ─────┤── All independent, run parallel
+           9C (security) ─────┘
+
+Sprint 10: 10A (updater) ─────┐
+           10B (perf) ────────┤── Mostly independent
+           10C (release) ─────┘── 10C depends on 10A+10B
+```
+
+### Human Touchpoints (Minimal)
+| When | What | Why |
+|------|------|-----|
+| After Sprint 9C | Review SECURITY-AUDIT.md | Security-critical attestation |
+| After Sprint 10C | Approve v1.0.0 tag push | Release authorization |
+| Post v1.0 | Provide API keys in .env.local | External service credentials |
+
+---
+
+## Immediate Next Action
+
+**Execute Sprint 6 NOW** — commit the existing 11 uncommitted files, verify all 699+ tests pass.
+Then proceed to Sprint 7 (headless browser module).

@@ -11,10 +11,12 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
+  DollarSign,
 } from "lucide-react";
 import { useWalletStore } from "../stores/walletStore";
 import { useChainStore } from "../stores/chainStore";
 import { usePriceStore } from "../stores/priceStore";
+import { formatUsd, formatUsdLarge } from "../lib/formatters";
 
 function MnemonicBackup({ mnemonic, onConfirm }) {
   const [confirmed, setConfirmed] = useState(false);
@@ -277,6 +279,27 @@ export default function WalletManager() {
       </div>
       <div className="h-px bg-gradient-to-r from-accent to-transparent" />
 
+      {/* Portfolio Total */}
+      {wallets.length > 0 && (() => {
+        const portfolioUsd = wallets.reduce((total, w) => {
+          const wBals = balances[w.address] || [];
+          return total + wBals.reduce((s, b) => s + (toUsd?.(b.chain, b.balance_eth) ?? 0), 0);
+        }, 0);
+        return (
+          <div className="bg-surface rounded-lg border border-accent/30 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign size={18} className="text-accent" />
+              <span className="text-text-muted text-xs uppercase tracking-wider">
+                Total Portfolio Value
+              </span>
+            </div>
+            <span className="text-2xl font-bold text-accent">
+              {formatUsdLarge(portfolioUsd)}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Actions */}
       <div className="flex items-center gap-3">
         <div className="flex items-center">
@@ -482,7 +505,7 @@ function WalletCard({ wallet, balances, toUsd }) {
           </div>
           {totalUsd > 0 && (
             <div className="text-[11px] text-accent">
-              ${totalUsd.toFixed(2)}
+              {formatUsd(totalUsd)}
             </div>
           )}
           <div className="text-xs text-text-muted">
@@ -509,7 +532,7 @@ function WalletCard({ wallet, balances, toUsd }) {
                 {b.chain === "polygon" ? "MATIC" : "ETH"}
                 {b.balance_eth > 0 && toUsd && (
                   <span className="ml-2 text-accent">
-                    (${toUsd(b.chain, b.balance_eth).toFixed(2)})
+                    ({formatUsd(toUsd(b.chain, b.balance_eth))})
                   </span>
                 )}
               </span>

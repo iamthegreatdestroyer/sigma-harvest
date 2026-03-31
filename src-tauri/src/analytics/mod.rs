@@ -12,6 +12,10 @@ pub struct AnalyticsSummary {
     pub successful_claims: u64,
     pub failed_claims: u64,
     pub active_opportunities: u64,
+    /// Number of consolidation sweep records.
+    pub consolidation_count: u64,
+    /// Total USD value moved via consolidation sweeps.
+    pub consolidation_total_usd: f64,
 }
 
 impl Default for AnalyticsSummary {
@@ -24,6 +28,8 @@ impl Default for AnalyticsSummary {
             successful_claims: 0,
             failed_claims: 0,
             active_opportunities: 0,
+            consolidation_count: 0,
+            consolidation_total_usd: 0.0,
         }
     }
 }
@@ -81,6 +87,8 @@ mod tests {
             successful_claims: 45,
             failed_claims: 5,
             active_opportunities: 12,
+            consolidation_count: 3,
+            consolidation_total_usd: 500.0,
         };
         let json = serde_json::to_string(&s).unwrap();
         let roundtrip: AnalyticsSummary = serde_json::from_str(&json).unwrap();

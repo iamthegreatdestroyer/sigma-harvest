@@ -9,6 +9,18 @@ pub struct DappRadarSource {
     pub api_key: Option<String>,
 }
 
+impl DappRadarSource {
+    /// Create a new DappRadarSource, reading `DAPPRADAR_API_KEY` from environment.
+    /// If the env var is absent, logs a warning and continues with no API key.
+    pub fn from_env() -> Self {
+        let api_key = std::env::var("DAPPRADAR_API_KEY").ok();
+        if api_key.is_none() {
+            tracing::warn!("DAPPRADAR_API_KEY not set; DappRadar requests will use unauthenticated access");
+        }
+        Self { api_key }
+    }
+}
+
 /// DappRadar airdrop listing response shape.
 #[derive(Debug, Deserialize)]
 struct DappRadarResponse {

@@ -24,6 +24,18 @@ pub struct SocialSource {
     pub bearer_token: Option<String>,
 }
 
+impl SocialSource {
+    /// Create a new SocialSource, reading `TWITTER_BEARER_TOKEN` from environment.
+    /// If the env var is absent, logs a warning and the source will return empty results.
+    pub fn from_env() -> Self {
+        let bearer_token = std::env::var("TWITTER_BEARER_TOKEN").ok();
+        if bearer_token.is_none() {
+            tracing::warn!("TWITTER_BEARER_TOKEN not set; social discovery source will be skipped");
+        }
+        Self { bearer_token }
+    }
+}
+
 /// Classify a tweet's text into an [`OpportunityType`] by keyword match.
 fn classify_tweet(text: &str) -> OpportunityType {
     let lower = text.to_lowercase();

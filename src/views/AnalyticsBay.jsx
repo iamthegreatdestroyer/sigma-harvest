@@ -21,6 +21,8 @@ import {
   Legend,
 } from "recharts";
 import useAnalyticsStore from "../stores/analyticsStore";
+import { usePriceStore } from "../stores/priceStore";
+import { formatUsd, formatUsdLarge } from "../lib/formatters";
 
 const SOURCE_COLORS = [
   "#6366f1",
@@ -40,11 +42,6 @@ const CHAIN_COLORS = [
   "#8b5cf6",
 ];
 
-function fmt(v) {
-  if (v == null) return "$0.00";
-  return `$${Number(v).toFixed(2)}`;
-}
-
 export default function AnalyticsBay() {
   const {
     summary,
@@ -55,9 +52,12 @@ export default function AnalyticsBay() {
     fetchAll,
   } = useAnalyticsStore();
 
+  const { fetchPrices, toUsd, prices } = usePriceStore();
+
   useEffect(() => {
     fetchAll();
-  }, [fetchAll]);
+    fetchPrices();
+  }, [fetchAll, fetchPrices]);
 
   const totalHarvested = summary?.total_value_collected_usd ?? 0;
   const gasSpent = summary?.total_gas_spent_usd ?? 0;
@@ -68,19 +68,19 @@ export default function AnalyticsBay() {
   const metrics = [
     {
       label: "Total Harvested",
-      value: fmt(totalHarvested),
+      value: formatUsdLarge(totalHarvested),
       icon: DollarSign,
       color: "text-primary",
     },
     {
       label: "Gas Spent",
-      value: fmt(gasSpent),
+      value: formatUsdLarge(gasSpent),
       icon: Fuel,
       color: "text-warning",
     },
     {
       label: "Net Profit",
-      value: fmt(netProfit),
+      value: formatUsdLarge(netProfit),
       icon: TrendingUp,
       color: netProfit >= 0 ? "text-accent" : "text-danger",
     },
@@ -256,6 +256,51 @@ export default function AnalyticsBay() {
           )}
         </div>
       </div>
+
+      {/* Chain Breakdown Table with USD */}
+      {chainBreakdown.length > 0 && (
+        <div className="bg-surface rounded-lg border border-border p-6">
+          <h3 className="text-sm font-semibold text-text-muted mb-4">
+            Chain Breakdown — USD Values
+          </h3>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-text-muted">
+                <th className="text-left py-2 px-3 uppercase tracking-wider">Chain</th>
+                <th className="text-right py-2 px-3 uppercase tracking-wider">Claims</th>
+                <th className="text-right py-2 px-3 uppercase tracking-wider">Value (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chainBreakdown.map((c, i) => (
+                <tr key={c.chain ?? i} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
+                  <td className="py-2 px-3 text-text capitalize">{c.chain ?? "Unknown"}</td>
+                  <td className="py-2 px-3 text-text text-right">{c.claim_count ?? 0}</td>
+                  <td className="py-2 px-3 text-accent text-right font-medium">
+                    {formatUsd(c.value_usd ?? toUsd(c.chain, c.total_native ?? 0))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-accent/30">
+                <td className="py-2 px-3 text-text-muted font-semibold">Total</td>
+                <td className="py-2 px-3 text-text text-right font-semibold">
+                  {chainBreakdown.reduce((s, c) => s + (c.claim_count ?? 0), 0)}
+                </td>
+                <td className="py-2 px-3 text-accent text-right font-bold">
+                  {formatUsdLarge(
+                    chainBreakdown.reduce(
+                      (s, c) => s + (c.value_usd ?? toUsd(c.chain, c.total_native ?? 0)),
+                      0
+                    )
+                  )}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
 
       {/* Export */}
       <div className="flex justify-end">

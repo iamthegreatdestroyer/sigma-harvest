@@ -72,6 +72,8 @@ mod tests {
             retry_count: 0,
             max_retries: 3,
             harvest_score: 50,
+            strategy: crate::executor::ClaimStrategy::SimpleClaim,
+            simulation_message: None,
         }
     }
 

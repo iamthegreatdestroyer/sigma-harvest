@@ -4,6 +4,7 @@
 use crate::chain::registry::{ChainConfig, SUPPORTED_CHAINS};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Semaphore;
@@ -67,12 +68,51 @@ pub struct ChainClient {
     http: Client,
     /// Per-chain semaphore to limit concurrent requests (free tier friendly).
     rate_limiter: Arc<Semaphore>,
+    /// Optional per-chain RPC URL overrides loaded from environment variables.
+    rpc_overrides: HashMap<String, String>,
 }
 
 impl ChainClient {
-    /// Create a new chain client.
+    /// Create a new chain client with default (built-in) RPC endpoints.
     /// `max_concurrent` controls how many simultaneous RPC calls are allowed.
     pub fn new(max_concurrent: usize) -> Self {
+        Self::with_overrides(max_concurrent, HashMap::new())
+    }
+
+    /// Create a new chain client, reading per-chain RPC URL overrides from
+    /// environment variables: `ETHEREUM_RPC_URL`, `ARBITRUM_RPC_URL`,
+    /// `OPTIMISM_RPC_URL`, `BASE_RPC_URL`, `POLYGON_RPC_URL`, `ZKSYNC_RPC_URL`.
+    ///
+    /// When set, the env var URL is tried *first* before the built-in fallback
+    /// endpoints. Missing env vars are logged at warn level and skipped.
+    pub fn from_env(max_concurrent: usize) -> Self {
+        let env_chains = [
+            ("ETHEREUM_RPC_URL", "ethereum"),
+            ("ARBITRUM_RPC_URL", "arbitrum"),
+            ("OPTIMISM_RPC_URL", "optimism"),
+            ("BASE_RPC_URL", "base"),
+            ("POLYGON_RPC_URL", "polygon"),
+            ("ZKSYNC_RPC_URL", "zksync"),
+        ];
+
+        let mut overrides = HashMap::new();
+        for (env_var, chain_name) in &env_chains {
+            match std::env::var(env_var) {
+                Ok(url) if !url.is_empty() => {
+                    tracing::info!("Using custom RPC for {chain_name} from {env_var}");
+                    overrides.insert(chain_name.to_string(), url);
+                }
+                _ => {
+                    tracing::warn!("{env_var} not set; using default RPC endpoints for {chain_name}");
+                }
+            }
+        }
+
+        Self::with_overrides(max_concurrent, overrides)
+    }
+
+    /// Internal constructor shared by `new()` and `from_env()`.
+    fn with_overrides(max_concurrent: usize, rpc_overrides: HashMap<String, String>) -> Self {
         let http = Client::builder()
             .timeout(Duration::from_secs(15))
             .build()
@@ -81,6 +121,7 @@ impl ChainClient {
         Self {
             http,
             rate_limiter: Arc::new(Semaphore::new(max_concurrent)),
+            rpc_overrides,
         }
     }
 
@@ -116,8 +157,15 @@ impl ChainClient {
 
         let mut last_error = String::new();
 
-        for rpc_url in &chain_config.rpc_urls {
-            match self.http.post(rpc_url).json(&request).send().await {
+        // Build URL list: env-override first, then built-in fallbacks
+        let mut urls: Vec<&str> = Vec::new();
+        if let Some(override_url) = self.rpc_overrides.get(&chain_config.name) {
+            urls.push(override_url.as_str());
+        }
+        urls.extend(chain_config.rpc_urls.iter().map(|s| s.as_str()));
+
+        for rpc_url in &urls {
+            match self.http.post(*rpc_url).json(&request).send().await {
                 Ok(resp) => {
                     if !resp.status().is_success() {
                         last_error = format!("HTTP {}", resp.status());
